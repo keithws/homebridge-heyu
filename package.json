@@ -1,0 +1,55 @@
+{
+  "name": "homebridge-heyu",
+  "version": "0.0.1",
+  "description": "heyu plugin for Homebridge: https://github.com/nfarina/homebridge",
+  "license": "ISC",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "author": {
+    "name": "NorthernMan54"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NorthernMan54/homebridge-heyu"
+  },
+  "dependencies": {
+    "request": "^2.65.0",
+    "polling-to-event": ">=2.0.2"
+  },
+  "gitHead": "f8a497ae79416f345c3aeb62f5284cbcef798146",
+  "bugs": {
+    "url": "https://github.com/NorthernMan54/homebridge-heyu/issues"
+  },
+  "homepage": "https://github.com/rudders/homebridge-heyu#readme",
+  "_id": "homebridge-heyu@0.0.9",
+  "_shasum": "1965ab279b5089303dc7c85ad8a2acc0cf22716c",
+  "_from": "homebridge-heyu@*",
+  "_resolved": "https://registry.npmjs.org/homebridge-heyu/-/homebridge-heyu-0.0.9.tgz",
+  "scripts": {},
+  "_npmVersion": "3.7.1",
+  "_nodeVersion": "5.1.0",
+  "_npmUser": {
+    "name": "rudders",
+    "email": "a.rudman@binarylight.com.au"
+  },
+  "dist": {
+    "shasum": "1965ab279b5089303dc7c85ad8a2acc0cf22716c",
+    "tarball": "https://registry.npmjs.org/homebridge-heyu/-/homebridge-heyu-0.0.9.tgz"
+  },
+  "maintainers": [
+    {
+      "name": "rudders",
+      "email": "a.rudman@binarylight.com.au"
+    }
+  ],
+  "_npmOperationalInternal": {
+    "host": "packages-9-west.internal.npmjs.com",
+    "tmp": "tmp/homebridge-heyu-0.0.9.tgz_1455614522900_0.3017259333282709"
+  },
+  "directories": {}
+}
