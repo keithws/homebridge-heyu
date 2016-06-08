@@ -13,7 +13,7 @@
   "keywords": [
     "x10",
     "heyu",
-    "homebridge"
+    "homebridge",
     "homebridge-plugin"
   ],
   "engines": {
