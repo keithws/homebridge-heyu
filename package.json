@@ -21,11 +21,9 @@
     "homebridge": ">=0.2.0"
   },
   "dependencies": {
-    "request": "^2.65.0",
-    "polling-to-event": ">=2.0.2"
   },
   "author": "NorthernMan54",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/NorthernMan54/homebridge-heyu/issues"
   },

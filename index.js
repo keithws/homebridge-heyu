@@ -1,41 +1,287 @@
-var Service, Characteristic;
-var request = require("request");
-var pollingtoevent = require('polling-to-event');
+/* jshint node: true */
+// Heyu Platform Plugin for HomeBridge
+//
+// Remember to add platform to config.json. Example:
+//"platforms": [{
+//       "platform": "Heyu",
+//       "name": "Heyu",
+//       "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
+//       "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
+//       "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
+//   }]
+
+"use strict";
+
+var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
+var spawn = require('child_process').spawn;
+var os = require("os");
+var heyuExec, cputemp, x10conf;
+var noMotionTimer;
 
 module.exports = function(homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
-    homebridge.registerAccessory("homebridge-heyu", "Heyu", HeyuAccessory);
-}
+    Accessory = homebridge.hap.Accessory;
+    uuid = homebridge.hap.uuid;
 
+    homebridge.registerPlatform("homebridge-heyu", "Heyu", HeyuPlatform);
+};
 
-function HeyuAccessory(log, config) {
+function HeyuPlatform(log, config) {
     this.log = log;
+    this.log("Heyu Platform Plugin Loaded ");
+    this.faccessories = {}; // an array of accessories by housecode
+    // platform options
+    heyuExec = config.heyuExec || "/usr/local/bin/heyu";
+    x10conf = config.x10conf || "/etc/heyu/x10.conf";
+    cputemp = config.cputemp;
 
-    // url info
-    this.device = config["device"];
-    this.on_command = config["on_command"] || "on";;
-    this.off_command = config["off_command"] || "off";;
-    this.statusHandling = config["statusHandling"] || "yes";
-    this.status_command = config["status_command"] || "onstate";
-    this.brightness_command = config["getbrightness_command"] || "dimlevel";
-    this.service = config["service"] || "Switch";
-    this.name = config["name"];
-    this.dimmable = config["dimmable"] || "no";
+    this.config = config;
+    this.devices = this.config.devices;
+}
 
-    //realtime polling info
-    this.state = true;
-    this.currentlevel = 0;
-    var that = this;
+function readX10config() {
+    var fs = require('fs');
+    var x10confObject = {};
+
+    var x10confData = fs.readFileSync(x10conf);
+    var pattern = new RegExp('\nalias.*', 'ig');
+
+    // ALIAS Front_Porch A1 StdLM
+
+    var match = [];
+    while ((match = pattern.exec(x10confData)) != null) {
+        var line = match[0].split(/[ \t]+/);
+        x10confObject[line[1]] = {
+            'name': line[1].replace(/_/g, ' '),
+            'housecode': line[2],
+            'module': line[3]
+        };
+    }
+    return x10confObject;
+}
+
+HeyuPlatform.prototype = {
+    accessories: function(callback) {
+        var foundAccessories = [];
+        var self = this;
+        //
+        var devices = new readX10config();
+
+        for (var i in devices) {
+            var device = devices[i];
+            this.log("Found in x10.conf: %s %s %s", device.name, device.housecode, device.module);
+            var accessory = new HeyuAccessory(self.log, device, null);
+            foundAccessories.push(accessory);
+            var housecode = device.housecode;
+            self.faccessories[housecode] = accessory;
+        }
+        // Built-in accessories and macro's
+        {
+            var device;
+            device.name = "All Devices";
+            device.housecode = "A";
+            device.module = "Macro-allon";
+            var accessory = new HeyuAccessory(self.log, device, null);
+            foundAccessories.push(accessory);
+        } {
+            var device;
+            device.name = "All Lights";
+            device.housecode = "A";
+            device.module = "Macro-lightson";
+            var accessory = new HeyuAccessory(self.log, device, null);
+            foundAccessories.push(accessory);
+        }
+
+        if (cputemp != undefined) {
+            var device;
+            device.name = os.hostname();
+            device.module = "Temperature";
+            var accessory = new HeyuAccessory(self.log, device, null);
+            foundAccessories.push(accessory);
+        }
+
+        // Start heyu monitor
+        this.log("Starting heyu monitor");
+
+        self.heyuMonitor = spawn(heyuExec, ["monitor"]);
+        self.heyuMonitor.stdout.on('data', function(data) {
+            self.handleOutput(self, data);
+        });
+        self.heyuMonitor.stderr.on('data', function(data) {
+            self.handleOutput(self, data);
+        });
+        self.heyuMonitor.on('close', function(code) {
+            self.log('Process ended. Code: ' + code);
+        });
+
+        self.log("heyuMonitor started.");
+
+
+        callback(foundAccessories);
+    },
+};
+
+
+function HeyuAccessory(log, device, enddevice) {
+    // This is executed once per accessory during initialization
+
+    var self = this;
+
+    self.device = device;
+    self.log = log;
+    self.name = device.name;
+    self.housecode = device.housecode;
+    self.module = device.module;
+    // heyu Commands
+
+    self.on_command = "on";
+    self.off_command = "off";
+    self.status_command = "onstate";
+    self.brightness_command = "dimlevel";
+    self.statusHandling = "yes";
+    self.dimmable = "yes";
 
 }
+
+HeyuPlatform.prototype.handleOutput = function(self, data) {
+
+    // 06/16 20:32:48  rcvi addr unit       5 : hu A5  (Family_room_Pot_lights)
+    // 06/16 20:32:48  rcvi func          Off : hc A
+
+    var message = data.toString().split(/[ \t]+/);
+    //    this.log("Message %s %s %s %s %s %s", message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
+    var operation = message[2];
+    var proc = message[3];
+    if (proc == "addr")
+        var messageHousecode = message[8];
+    else if (proc == "func")
+        var messageCommand = message[4];
+
+    if (proc == "addr" && operation == "rcvi") {
+        this.log("Event occured at housecode %s", messageHousecode);
+        var accessory = self.faccessories[messageHousecode];
+        if (accessory != undefined) {
+        self.heyuEvent(self, accessory);
+      }
+        else {
+          this.log.error("Event occured at unknown device %s ignoring", messageHousecode);
+        }
+    }
+
+}
+
+
+HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
+
+    var other = accessory;
+    other.service.getCharacteristic(Characteristic.On)
+        .getValue();
+    if (other.dimmable == "yes")
+        other.service.getCharacteristic(Characteristic.Brightness)
+        .getValue();
+
+}
+
+
+
 
 HeyuAccessory.prototype = {
 
+    getServices: function() {
+        var services = [];
+        // set up the accessory information - not sure how mandatory any of this is.
+        var service = new Service.AccessoryInformation();
+        service.setCharacteristic(Characteristic.Name, this.name).setCharacteristic(Characteristic.Manufacturer, "Heyu");
+
+        service
+            .setCharacteristic(Characteristic.Model, this.module + " " + this.housecode)
+            .setCharacteristic(Characteristic.SerialNumber, this.housecode)
+            .setCharacteristic(Characteristic.FirmwareRevision, this.device.firmwareVersion)
+            .setCharacteristic(Characteristic.HardwareRevision, this.module);
+
+        services.push(service);
+
+        switch (this.module) {
+            case "Macro-allon": // The heyu allon macro
+                this.log("Macro-allon: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.on_command = "allon";
+                this.off_command = "alloff";
+                this.dimmable = "no";
+                this.statusHandling = "no";
+                this.service = new Service.Switch(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.On)
+                    .on('get', function(callback) {
+                        var that = this;
+                        callback(null, that.state)
+                    })
+                    .on('set', this.setPowerState.bind(this));
+
+                services.push(this.service);
+                break;
+            case "Macro-lightson": // The heyu allon macro
+                this.log("Macro-allon: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.on_command = "lightson";
+                this.off_command = "lightsoff";
+                this.dimmable = "no";
+                this.statusHandling = "no";
+                this.service = new Service.Switch(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.On)
+                    .on('get', function(callback) {
+                        var that = this;
+                        callback(null, that.state)
+                    })
+                    .on('set', this.setPowerState.bind(this));
+
+                services.push(this.service);
+                break;
+            case "StdLM":
+                this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.service = new Service.Lightbulb(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.On)
+                    .on('get', this.getPowerState.bind(this))
+                    .on('set', this.setPowerState.bind(this));
+                // Brightness Polling
+                if (this.dimmable == "yes") {
+                    this.service
+                        .addCharacteristic(new Characteristic.Brightness())
+                        .on('get', this.getBrightness.bind(this))
+                        .on('set', this.setBrightness.bind(this));
+                }
+
+                services.push(this.service);
+                break;
+            case "StdAM":
+                this.log("StdAM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.dimmable = "no"; // All Appliance modules are not dimmable
+                this.service = new Service.Outlet(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.On)
+                    .on('get', this.getPowerState.bind(this))
+                    .on('set', this.setPowerState.bind(this));
+                services.push(this.service);
+                break;
+            case "Temperature":
+                this.service = new Service.TemperatureSensor(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.CurrentTemperature)
+                    .on('get', this.getTemperature.bind(this));
+                services.push(this.service);
+                break;
+            default:
+                this.log.error("Unknown Module Type %s", this.module);
+        }
+        return services;
+    },
+
+    //start of Heyu Functions
 
     setPowerState: function(powerOn, callback) {
-        var device;
+        var housecode;
         var command;
 
         if (!this.on_command || !this.off_command) {
@@ -45,25 +291,24 @@ HeyuAccessory.prototype = {
         }
 
         if (powerOn) {
-            device = this.device;
+            housecode = this.housecode;
             command = this.on_command;
         } else {
-            device = this.device;
+            housecode = this.housecode;
             command = this.off_command;
         }
 
-        heyuExec = '/usr/local/bin/heyu';
-        exec(heyuExec, [command, device], function(error, stdout, stderr) {
+        exec(heyuExec, [command, housecode], function(error, stdout, stderr) {
             if (error !== null) {
                 this.log('exec error: ' + error);
                 this.log('Heyu set power function failed!');
                 callback(error);
             } else {
                 this.powerOn = powerOn;
-                this.log("Set power state of %s to %s", device, command);
+                this.log("Set power state of %s to %s", housecode, command);
                 if (this.dimmable == "yes") {
                     var that = this;
-                    that.lightbulbService.getCharacteristic(Characteristic.Brightness)
+                    that.service.getCharacteristic(Characteristic.Brightness)
                         .getValue();
                 }
                 callback();
@@ -85,17 +330,17 @@ HeyuAccessory.prototype = {
         }
 
 
-        var device = this.device;
+        var housecode = this.housecode;
         var command = this.status_command;
 
-        heyuExec = '/usr/local/bin/heyu';
-        exec(heyuExec, [command, device], function(error, responseBody, stderr) {
+
+        exec(heyuExec, [command, housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu onstate function failed: ' + error);
                 callback(error);
             } else {
                 var binaryState = parseInt(responseBody);
-                this.log("Got power state of %s %s", device, binaryState);
+                this.log("Got power state of %s %s", housecode, binaryState);
                 var powerOn = binaryState > 0;
                 callback(null, powerOn);
                 this.powerOn = powerOn;
@@ -112,24 +357,24 @@ HeyuAccessory.prototype = {
         }
 
         if (this.dimmable == "no") {
-            this.log.warn("Ignoring request; device not dimmable.");
+            this.log.warn("Ignoring request; housecode not dimmable.");
             callback(new Error("Device not dimmable."));
             return;
         }
 
 
-        var device = this.device;
+        var housecode = this.housecode;
         var command = this.brightness_command;
 
 
-        heyuExec = '/usr/local/bin/heyu';
-        exec(heyuExec, [command, device], function(error, responseBody, stderr) {
+
+        exec(heyuExec, [command, housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu function failed: ' + error);
                 callback(error);
             } else {
                 var binaryState = parseInt(responseBody);
-                this.log("Got brightness level of %s %s", device, binaryState);
+                this.log("Got brightness level of %s %s", housecode, binaryState);
                 this.brightness = binaryState;
                 callback(null, binaryState);
             }
@@ -139,8 +384,7 @@ HeyuAccessory.prototype = {
 
     setBrightness: function(level, callback) {
 
-
-        var device = this.device;
+        var housecode = this.housecode;
 
         if (isNaN(this.brightness) || !this.powerOn) {
             var current = 100;
@@ -159,19 +403,19 @@ HeyuAccessory.prototype = {
         // Keyboard debouncing
 
         if (delta > 1) {
-            heyuExec = '/usr/local/bin/heyu';
-            exec(heyuExec, [command, device, delta], function(error, stdout, stderr) {
+
+            exec(heyuExec, [command, housecode, delta], function(error, stdout, stderr) {
                 if (error !== null) {
                     this.log('Heyu brightness function failed: %s', error);
                     callback(error);
                 } else {
                     this.brightness = level;
                     this.powerOn = true;
-                    this.log("Set Bright/Dim %s %s %s ( %s % )", command, device, delta, level);
+                    this.log("Set Bright/Dim %s %s %s ( %s % )", command, housecode, delta, level);
                     var other = this;
-                    other.lightbulbService.getCharacteristic(Characteristic.On)
+                    other.service.getCharacteristic(Characteristic.On)
                         .getValue();
-                    other.lightbulbService.getCharacteristic(Characteristic.Brightness)
+                    other.service.getCharacteristic(Characteristic.Brightness)
                         .getValue();
                     callback();
                 }
@@ -182,60 +426,22 @@ HeyuAccessory.prototype = {
         }
     },
 
+    getTemperature: function(callback) {
+        exec(cputemp, function(error, responseBody, stderr) {
+            if (error !== null) {
+                this.log('cputemp function failed: ' + error);
+                callback(error);
+            } else {
+                var binaryState = parseInt(responseBody);
+                this.log("Got Temperature of %s", binaryState);
+                this.brightness = binaryState;
+                callback(null, binaryState);
+            }
+        }.bind(this));
+    },
+
     identify: function(callback) {
         this.log("Identify requested!");
         callback(); // success
-    },
-
-    getServices: function() {
-
-        var that = this;
-
-        // you can OPTIONALLY create an information service if you wish to override
-        // the default values for things like serial number, model, etc.
-        var informationService = new Service.AccessoryInformation();
-
-        informationService
-            .setCharacteristic(Characteristic.Manufacturer, "Heyu Manufacturer")
-            .setCharacteristic(Characteristic.Model, this.service)
-            .setCharacteristic(Characteristic.SerialNumber, this.device);
-
-        switch (this.service) {
-            case "Switch":
-                this.switchService = new Service.Switch(this.name);
-                switch (this.statusHandling) {
-                    case "yes":
-                        this.switchService
-                            .getCharacteristic(Characteristic.On)
-                            .on('get', this.getPowerState.bind(this))
-                            .on('set', this.setPowerState.bind(this));
-                        break;
-                    case "no":
-                        this.switchService
-                            .getCharacteristic(Characteristic.On)
-                            .on('get', function(callback) {
-                                callback(null, that.state)
-                            })
-                            .on('set', this.setPowerState.bind(this));
-                        break;
-                }
-                return [informationService, this.switchService];
-            case "Light":
-                this.lightbulbService = new Service.Lightbulb(this.name);
-                this.lightbulbService
-                    .getCharacteristic(Characteristic.On)
-                    .on('get', this.getPowerState.bind(this))
-                    .on('set', this.setPowerState.bind(this));
-                // Brightness Polling
-                if (this.dimmable == "yes") {
-                    this.lightbulbService
-                        .addCharacteristic(new Characteristic.Brightness())
-                        .on('get', this.getBrightness.bind(this))
-                        .on('set', this.setBrightness.bind(this));
-                }
-
-                return [informationService, this.lightbulbService];
-                break;
-        }
     }
 };
