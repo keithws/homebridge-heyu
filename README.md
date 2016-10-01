@@ -37,6 +37,7 @@ running
        "name": "Heyu",
        "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
        "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
+       "useFireCracker": false              //optional - If true, issues commands via the CM17A FireCracker module
        "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
    }]
 ```
