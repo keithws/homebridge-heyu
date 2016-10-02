@@ -238,6 +238,9 @@ HeyuAccessory.prototype = {
 
                 services.push(this.service);
                 break;
+            case "LM":
+            case "LM12":
+            case "LM465":
             case "StdLM":
                 this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.service = new Service.Lightbulb(this.name);
@@ -255,10 +258,28 @@ HeyuAccessory.prototype = {
 
                 services.push(this.service);
                 break;
+            case "AM":
+            case "AMS":
+            case "AM12":
             case "StdAM":
                 this.log("StdAM: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.dimmable = "no"; // All Appliance modules are not dimmable
                 this.service = new Service.Outlet(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.On)
+                    .on('get', this.getPowerState.bind(this))
+                    .on('set', this.setPowerState.bind(this));
+                services.push(this.service);
+                break;
+            case "WS":
+            case "WS-1":
+            case "WS467":
+            case "WS467-1":
+            case "XPS3":
+            case "StdWS":
+                this.log("StdWS: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.dimmable = "no"; // Technically some X10 switches are dimmable, but we're treating them as on/off
+                this.service = new Service.Switch(this.name);
                 this.service
                     .getCharacteristic(Characteristic.On)
                     .on('get', this.getPowerState.bind(this))
