@@ -7,6 +7,7 @@
 //       "name": "Heyu",
 //       "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
 //       "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
+//       "useFireCracker": false,             //optional - If true, uses CM17A FireCracker module to issue on/off commands
 //       "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
 //   }]
 
@@ -16,8 +17,20 @@ var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
 var spawn = require('child_process').spawn;
 var os = require("os");
-var heyuExec, cputemp, x10conf;
+var heyuExec, cputemp, x10conf, useFireCracker;
 var noMotionTimer;
+var X10Commands={
+    on:"on",
+    off:"off",
+    bright:"bright",
+    dim:"dim",
+    dimlevel:"dimlevel",
+    allon:"allon",
+    alloff:"alloff",
+    lightson:"lightson",
+    lightsoff:"lightsoff",
+    onstate:"onstate"
+};
 
 module.exports = function(homebridge) {
     Service = homebridge.hap.Service;
@@ -35,7 +48,12 @@ function HeyuPlatform(log, config) {
     // platform options
     heyuExec = config.heyuExec || "/usr/local/bin/heyu";
     x10conf = config.x10conf || "/etc/heyu/x10.conf";
+    useFireCracker = config.useFireCracker || false;
     cputemp = config.cputemp;
+
+    if (useFireCracker) {
+        enableFireCracker();
+    }
 
     this.config = config;
     this.devices = this.config.devices;
@@ -60,6 +78,17 @@ function readX10config() {
         };
     }
     return x10confObject;
+}
+
+function enableFireCracker() {
+    X10Commands.on = "fon";
+    X10Commands.off = "foff";
+    X10Commands.bright = "fbright";
+    X10Commands.dim = "fdim";
+    X10Commands.allon = "fallon";
+    X10Commands.alloff = "falloff";
+    X10Commands.lightson = "flightson";
+    X10Commands.lightsoff = "flightsoff";
 }
 
 HeyuPlatform.prototype = {
@@ -118,6 +147,9 @@ HeyuPlatform.prototype = {
 
         self.log("heyuMonitor started.");
 
+        if (useFireCracker) {
+            self.log("CM17A FireCracker module support enabled");
+        }
 
         callback(foundAccessories);
     },
@@ -136,10 +168,10 @@ function HeyuAccessory(log, device, enddevice) {
     self.module = device.module;
     // heyu Commands
 
-    self.on_command = "on";
-    self.off_command = "off";
-    self.status_command = "onstate";
-    self.brightness_command = "dimlevel";
+    self.on_command = X10Commands.on;
+    self.off_command = X10Commands.off;
+    self.status_command = X10Commands.onstate;
+    self.brightness_command = X10Commands.dimlevel;
     self.statusHandling = "yes";
     self.dimmable = "yes";
 
@@ -206,8 +238,8 @@ HeyuAccessory.prototype = {
         switch (this.module) {
             case "Macro-allon": // The heyu allon macro
                 this.log("Macro-allon: Adding %s %s as a %s", this.name, this.housecode, this.module);
-                this.on_command = "allon";
-                this.off_command = "alloff";
+                this.on_command = X10Commands.allon;
+                this.off_command = X10Commands.alloff;
                 this.dimmable = "no";
                 this.statusHandling = "no";
                 this.service = new Service.Switch(this.name);
@@ -223,8 +255,8 @@ HeyuAccessory.prototype = {
                 break;
             case "Macro-lightson": // The heyu allon macro
                 this.log("Macro-allon: Adding %s %s as a %s", this.name, this.housecode, this.module);
-                this.on_command = "lightson";
-                this.off_command = "lightsoff";
+                this.on_command = X10Commands.lightson;
+                this.off_command = X10Commands.lightsoff;
                 this.dimmable = "no";
                 this.statusHandling = "no";
                 this.service = new Service.Switch(this.name);
@@ -393,10 +425,10 @@ HeyuAccessory.prototype = {
         }
 
         if (level > current) {
-            var command = "bright";
+            var command = X10Commands.bright;
             var delta = parseInt((level - current) / 4.54);
         } else {
-            var command = "dim";
+            var command = X10Commands.dim;
             var delta = parseInt((current - level) / 4.54);
         }
 

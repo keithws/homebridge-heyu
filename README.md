@@ -19,6 +19,9 @@ START_ENGINE  AUTO
 Also included are two macro's, "All Devices" and "All Lights", which map to the
 commands allon/alloff and lightson/lightsoff on housecode A.
 
+On, off, bright and dim commands can also be sent via the CM17A FireCracker module
+by setting "useFireCracker" to **true** in the configuration settings.
+
 # Installation
 
 1. Install homebridge using: npm install -g homebridge
@@ -37,6 +40,7 @@ running
        "name": "Heyu",
        "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
        "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
+       "useFireCracker": false              //optional - If true, issues commands via the CM17A FireCracker module
        "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
    }]
 ```
