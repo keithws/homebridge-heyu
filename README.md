@@ -63,3 +63,6 @@ echo $cpuTemp1" C"
 ```
 
 # ToDo
+
+# Credits
+Firecracker commands and additional modules - W7RZL
