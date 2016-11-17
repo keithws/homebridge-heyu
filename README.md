@@ -24,8 +24,11 @@ by setting "useFireCracker" to **true** in the configuration settings.
 # Modules Types Supported
 
 Lamp Module ( Light Bulb ) - LM, LM12, LM465, StdLM
+
 Appliance Module ( Outlet ) - AM, AMS, AM12, StdAM
+
 Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
+
 Motion Sensor - MS10, MS12A, MS13A, MS14A, MS16A
 
 Please note that only the lamp module has the dimming feature, so if have a switch
