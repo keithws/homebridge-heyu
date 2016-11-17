@@ -19,17 +19,17 @@ var spawn = require('child_process').spawn;
 var os = require("os");
 var heyuExec, cputemp, x10conf, useFireCracker;
 var noMotionTimer;
-var X10Commands={
-    on:"on",
-    off:"off",
-    bright:"bright",
-    dim:"dim",
-    dimlevel:"dimlevel",
-    allon:"allon",
-    alloff:"alloff",
-    lightson:"lightson",
-    lightsoff:"lightsoff",
-    onstate:"onstate"
+var X10Commands = {
+    on: "on",
+    off: "off",
+    bright: "bright",
+    dim: "dim",
+    dimlevel: "dimlevel",
+    allon: "allon",
+    alloff: "alloff",
+    lightson: "lightson",
+    lightsoff: "lightsoff",
+    onstate: "onstate"
 };
 
 module.exports = function(homebridge) {
@@ -195,10 +195,9 @@ HeyuPlatform.prototype.handleOutput = function(self, data) {
         this.log("Event occured at housecode %s", messageHousecode);
         var accessory = self.faccessories[messageHousecode];
         if (accessory != undefined) {
-        self.heyuEvent(self, accessory);
-      }
-        else {
-          this.log.error("Event occured at unknown device %s ignoring", messageHousecode);
+            self.heyuEvent(self, accessory);
+        } else {
+            this.log.error("Event occured at unknown device %s ignoring", messageHousecode);
         }
     }
 
@@ -208,16 +207,42 @@ HeyuPlatform.prototype.handleOutput = function(self, data) {
 HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
 
     var other = accessory;
-    other.service.getCharacteristic(Characteristic.On)
-        .getValue();
-    if (other.dimmable == "yes")
-        other.service.getCharacteristic(Characteristic.Brightness)
-        .getValue();
+    switch (other.module) {
+        case "AM":
+        case "AMS":
+        case "AM12":
+        case "StdAM":
+        case "WS":
+        case "WS-1":
+        case "WS467":
+        case "WS467-1":
+        case "XPS3":
+        case "StdWS":
+            other.service.getCharacteristic(Characteristic.On)
+                .getValue();
+            break;
+        case "LM":
+        case "LM12":
+        case "LM465":
+        case "StdLM":
+            other.service.getCharacteristic(Characteristic.Brightness)
+                .getValue();
+            other.service.getCharacteristic(Characteristic.On)
+                .getValue();
+            break;
+        case "MS10":
+        case "MS12A":
+        case "MS13A":
+        case "MS14A":
+        case "MS16A":
+            other.service.getCharacteristic(Characteristic.MotionDetected)
+                .getValue();
+            break;
+        default:
+            this.log.error("No events defined for Module Type %s", this.module);
+    }
 
 }
-
-
-
 
 HeyuAccessory.prototype = {
 
@@ -316,6 +341,18 @@ HeyuAccessory.prototype = {
                     .getCharacteristic(Characteristic.On)
                     .on('get', this.getPowerState.bind(this))
                     .on('set', this.setPowerState.bind(this));
+                services.push(this.service);
+                break;
+                case "MS10":
+                case "MS12A":
+                case "MS13A":
+                case "MS14A":
+                case "MS16A":
+                this.log("Motion Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.service = new Service.MotionSensor(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.MotionDetected)
+                    .on('get', this.getPowerState.bind(this));
                 services.push(this.service);
                 break;
             case "Temperature":
