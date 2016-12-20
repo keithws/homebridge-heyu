@@ -31,9 +31,11 @@ Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
 
 Motion Sensor - MS10, MS12A, MS13A, MS14A, MS16A
 
-Please note that only the lamp module has the dimming feature, so if have a switch
-that you want to be able to dim, define it as a LM.  And if you have a lamp that
-you do want to be able to dim, define it as a WS.
+Insteon Modules accepting X10 Commands - SL2LM ( 2477D )
+
+Please note that only the lamp module and Insteon Module has the dimming feature,
+so if have a switch that you want to be able to dim, define it as a LM.  And if
+you have a lamp that you do not want to be able to dim, define it as a WS.
 
 # Installation
 
