@@ -550,7 +550,6 @@ HeyuAccessory.prototype = {
             var current = this.brightness;
         }
 
-
         exec(heyuExec, [X10Commands.preset, housecode, parseInt((level / 3.125) + .9)], function(error, stdout, stderr) {
             if (error !== null) {
                 this.log('Heyu preset function failed: %s', error);
@@ -560,10 +559,10 @@ HeyuAccessory.prototype = {
                 this.powerOn = true;
                 this.log("Set preset %s %s %s %s", housecode, level, parseInt((level / 3.125) + .9), parseInt(parseInt((level / 3.125) + .9) * 3.125));
                 var other = this;
-                //   other.service.getCharacteristic(Characteristic.On)
-                //       .getValue();
-                //   other.service.getCharacteristic(Characteristic.Brightness)
-                //       .getValue();
+                other.service.getCharacteristic(Characteristic.On)
+                       .getValue();
+                   other.service.getCharacteristic(Characteristic.Brightness)
+                       .getValue();
                 callback(null);
             }
         }.bind(this));
