@@ -509,7 +509,7 @@ HeyuAccessory.prototype = {
             } else
                 callback(null);
         } else {
-            this.setSLBrightness(1, callback);
+            this.setSLBrightness(3, callback);
         }
     },
 
