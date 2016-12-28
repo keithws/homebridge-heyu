@@ -336,7 +336,7 @@ HeyuAccessory.prototype = {
                     this.service
                         .addCharacteristic(new Characteristic.Brightness())
                         .setProps({
-                            minValue: 6,
+                            minValue: 3,
                             minStep: 3.125
                         })
                         .on('get', this.getSLBrightness.bind(this))
@@ -509,7 +509,7 @@ HeyuAccessory.prototype = {
             } else
                 callback(null);
         } else {
-            this.setSLBrightness(3, callback);
+            this.setSLBrightness(1, callback);
         }
     },
 
