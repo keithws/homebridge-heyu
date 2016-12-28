@@ -1,6 +1,6 @@
 {
   "name": "homebridge-heyu",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "X10/Heyu plugin for HomeBridge",
   "main": "index.js",
   "scripts": {
