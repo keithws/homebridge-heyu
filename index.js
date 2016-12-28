@@ -532,7 +532,7 @@ HeyuAccessory.prototype = {
                 callback(error);
             } else {
                 var binaryState = parseInt(responseBody * 3.125);
-                this.log("Got brightness level of %s %s", housecode, binaryState);
+                this.log("Got brightness level of %s %s", this.housecode, binaryState);
                 this.brightness = binaryState;
                 callback(null, binaryState);
             }
