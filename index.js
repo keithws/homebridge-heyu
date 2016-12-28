@@ -26,6 +26,7 @@ var X10Commands = {
     preset: "preset",
     dim: "dim",
     dimlevel: "dimlevel",
+    rawlevel: "rawlevel",
     allon: "allon",
     alloff: "alloff",
     lightson: "lightson",
@@ -314,6 +315,9 @@ HeyuAccessory.prototype = {
                 if (this.dimmable == "yes") {
                     this.service
                         .addCharacteristic(new Characteristic.Brightness())
+                        .setProps({
+                            minStep: 4.54
+                        })
                         .on('get', this.getBrightness.bind(this))
                         .on('set', this.setBrightness.bind(this));
                 }
@@ -321,7 +325,7 @@ HeyuAccessory.prototype = {
                 services.push(this.service);
                 break;
             case "SL2LM":
-                this.log("SL2LM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.service = new Service.Lightbulb(this.name);
                 this.service
                     .getCharacteristic(Characteristic.On)
@@ -331,7 +335,11 @@ HeyuAccessory.prototype = {
                 if (this.dimmable == "yes") {
                     this.service
                         .addCharacteristic(new Characteristic.Brightness())
-                        .on('get', this.getBrightness.bind(this))
+                        .setProps({
+                            minValue: 1,
+                            minStep: 3.125
+                        })
+                        .on('get', this.getSLBrightness.bind(this))
                         .on('set', this.setSLBrightness.bind(this));
                 }
 
@@ -365,11 +373,11 @@ HeyuAccessory.prototype = {
                     .on('set', this.setPowerState.bind(this));
                 services.push(this.service);
                 break;
-                case "MS10":
-                case "MS12A":
-                case "MS13A":
-                case "MS14A":
-                case "MS16A":
+            case "MS10":
+            case "MS12A":
+            case "MS13A":
+            case "MS14A":
+            case "MS16A":
                 this.log("Motion Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.service = new Service.MotionSensor(this.name);
                 this.service
@@ -495,17 +503,45 @@ HeyuAccessory.prototype = {
     },
 
     setSLPowerState: function(powerOn, callback) {
-	if ( powerOn ) {
-		if (isNaN(this.brightness) || !this.powerOn) {
-		this.setSLBrightness( 100,callback);
-		} else
-	callback(null);
-	} else {
-		this.setSLBrightness( 0,callback ); }
-	},
+        if (powerOn) {
+            if (isNaN(this.brightness) || !this.powerOn) {
+                this.setSLBrightness(100, callback);
+            } else
+                callback(null);
+        } else {
+            this.setSLBrightness(0, callback);
+        }
+    },
+
+    getSLBrightness: function(callback) {
+        if (!X10Commands.rawlevel) {
+            this.log.warn("Ignoring request; No rawlevel command defined.");
+            callback(new Error("No rawlevel command defined."));
+            return;
+        }
+
+        if (this.dimmable == "no") {
+            this.log.warn("Ignoring request; housecode not dimmable.");
+            callback(new Error("Device not dimmable."));
+            return;
+        }
+
+        exec(heyuExec, [X10Commands.rawlevel, this.housecode], function(error, responseBody, stderr) {
+            if (error !== null) {
+                this.log('Heyu function failed: ' + error);
+                callback(error);
+            } else {
+                var binaryState = parseInt(responseBody * 3.125);
+                this.log("Got brightness level of %s %s", housecode, binaryState);
+                this.brightness = binaryState;
+                callback(null, binaryState);
+            }
+        }.bind(this));
+
+    },
+
 
     setSLBrightness: function(level, callback) {
-
         var housecode = this.housecode;
 
         if (isNaN(this.brightness) || !this.powerOn) {
@@ -514,36 +550,27 @@ HeyuAccessory.prototype = {
             var current = this.brightness;
         }
 
-        if (level > current) {
-            var delta = parseInt((level - current) / 3);
-        } else {
-            var delta = parseInt((current - level) / 3);
-        }
 
-        // Keyboard debouncing
-
-        if (delta > 1) {
-
-            exec(heyuExec, [X10Commands.preset, housecode, pct2preset(level)], function(error, stdout, stderr) {
-                if (error !== null) {
-                    this.log('Heyu preset function failed: %s', error);
-                    callback(error);
-                } else {
-                    this.brightness = level;
-                    this.powerOn = true;
-                    this.log("Set preset %s %s %s", housecode, level, pct2preset(level));
-                    var other = this;
-                 //   other.service.getCharacteristic(Characteristic.On)
-                 //       .getValue();
-                 //   other.service.getCharacteristic(Characteristic.Brightness)
-                 //       .getValue();
-                    callback(null);
-                }
-            }.bind(this));
-        } else {
-            this.log('Change too small, ignored');
-            callback(null);
-        }
+        exec(heyuExec, [X10Commands.preset, housecode, parseInt((level / 3.125) + .9)], function(error, stdout, stderr) {
+            if (error !== null) {
+                this.log('Heyu preset function failed: %s', error);
+                callback(error);
+            } else {
+                this.brightness = level;
+                this.powerOn = true;
+                this.log("Set preset %s %s %s %s", housecode, level, parseInt((level / 3.125) + .9), parseInt(parseInt((level / 3.125) + .9) * 3.125));
+                var other = this;
+                //   other.service.getCharacteristic(Characteristic.On)
+                //       .getValue();
+                //   other.service.getCharacteristic(Characteristic.Brightness)
+                //       .getValue();
+                callback(null);
+            }
+        }.bind(this));
+        //      } else {
+        //          this.log('Change too small, ignored');
+        //          callback(null);
+        //      }
     },
 
     setBrightness: function(level, callback) {
@@ -610,70 +637,70 @@ HeyuAccessory.prototype = {
     }
 };
 
-function pct2preset( percent ) {
+function pct2preset(percent) {
 
-        if ( percent < 5 ) {
-                return 1;
-        } else if ( percent <= 18 ) {
-                return 2;
-        } else if ( percent <= 21 ) {
-                return 3;
-        } else if ( percent <= 23 ) {
-                return 4;
-        } else if ( percent <= 27 ) {
-                return 5;
-        } else if ( percent <= 28 ) {
-                return 6;
-        } else if ( percent <= 31 ) {
-                return 7;
-        } else if ( percent <= 34 ) {
-                return 8;
-        } else if ( percent <= 36 ) {
-                return 9;
-        } else if ( percent <= 39 ) {
-                return 10;
-        } else if ( percent <= 42 ) {
-                return 11;
-        } else if ( percent <= 45 ) {
-                return 12;
-        } else if ( percent <= 48 ) {
-                return 13;
-        } else if ( percent <= 51 ) {
-                return 14;
-        } else if ( percent <= 54 ) {
-                return 15;
-        } else if ( percent <= 57 ) {
-                return 16;
-        } else if ( percent <= 60 ) {
-                return 17;
-        } else if ( percent <= 63 ) {
-                return 18;
-        } else if ( percent <= 67 ) {
-                return 19;
-        } else if ( percent <= 70 ) {
-                return 20;
-        } else if ( percent <= 73 ) {
-                return 21;
-        } else if ( percent <= 76 ) {
-                return 22;
-        } else if ( percent <= 79 ) {
-                return 23;
-        } else if ( percent <= 82 ) {
-                return 24;
-        } else if ( percent <= 85 ) {
-                return 25;
-        } else if ( percent <= 87 ) {
-                return 26;
-        } else if ( percent <= 90 ) {
-                return 27;
-        } else if ( percent <= 92 ) {
-                return 28;
-        } else if ( percent <= 95 ) {
-                return 29;
-        } else if ( percent <= 97 ) {
-                return 30;
-        } else if ( percent <= 99 ) {
-                return 31;
-        }
-        return 32;
+    if (percent < 5) {
+        return 1;
+    } else if (percent <= 18) {
+        return 2;
+    } else if (percent <= 21) {
+        return 3;
+    } else if (percent <= 23) {
+        return 4;
+    } else if (percent <= 27) {
+        return 5;
+    } else if (percent <= 28) {
+        return 6;
+    } else if (percent <= 31) {
+        return 7;
+    } else if (percent <= 34) {
+        return 8;
+    } else if (percent <= 36) {
+        return 9;
+    } else if (percent <= 39) {
+        return 10;
+    } else if (percent <= 42) {
+        return 11;
+    } else if (percent <= 45) {
+        return 12;
+    } else if (percent <= 48) {
+        return 13;
+    } else if (percent <= 51) {
+        return 14;
+    } else if (percent <= 54) {
+        return 15;
+    } else if (percent <= 57) {
+        return 16;
+    } else if (percent <= 60) {
+        return 17;
+    } else if (percent <= 63) {
+        return 18;
+    } else if (percent <= 67) {
+        return 19;
+    } else if (percent <= 70) {
+        return 20;
+    } else if (percent <= 73) {
+        return 21;
+    } else if (percent <= 76) {
+        return 22;
+    } else if (percent <= 79) {
+        return 23;
+    } else if (percent <= 82) {
+        return 24;
+    } else if (percent <= 85) {
+        return 25;
+    } else if (percent <= 87) {
+        return 26;
+    } else if (percent <= 90) {
+        return 27;
+    } else if (percent <= 92) {
+        return 28;
+    } else if (percent <= 95) {
+        return 29;
+    } else if (percent <= 97) {
+        return 30;
+    } else if (percent <= 99) {
+        return 31;
+    }
+    return 32;
 }
