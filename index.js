@@ -330,7 +330,7 @@ HeyuAccessory.prototype = {
                 this.service
                     .getCharacteristic(Characteristic.On)
                     .on('get', this.getPowerState.bind(this))
-                    .on('set', this.setSLPowerState.bind(this));
+                    .on('set', this.setPowerState.bind(this));
                 // Brightness Polling
                 if (this.dimmable == "yes") {
                     this.service
@@ -500,17 +500,6 @@ HeyuAccessory.prototype = {
             }
         }.bind(this));
 
-    },
-
-    setSLPowerState: function(powerOn, callback) {
-        if (powerOn) {
-            if (isNaN(this.brightness) || !this.powerOn) {
-                this.setSLBrightness(100, callback);
-            } else
-                callback(null);
-        } else {
-            this.setSLBrightness(1, callback);
-        }
     },
 
     getSLBrightness: function(callback) {
