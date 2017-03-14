@@ -1,5 +1,7 @@
 # homebridge-heyu
 
+[![NPM Downloads](https://img.shields.io/npm/dm/homebridge-heyu.svg?style=flat)](https://npmjs.org/package/homebridge-heyu)
+
 Supports X10 devices via heyu on the HomeBridge Platform. Tested with a CM11A
 Module connected via a USB Serial adapter. For device configuration, it parses
 the heyu configuration file /etc/heyu/x10.conf and creates an accessory for each
