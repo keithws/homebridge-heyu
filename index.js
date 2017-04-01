@@ -257,9 +257,6 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
 
 }
 
-
-
-
 HeyuAccessory.prototype = {
 
     getServices: function() {
