@@ -33,11 +33,24 @@ Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
 
 Motion Sensor - MS10, MS12A, MS13A, MS14A, MS16A
 
+Light Sensor - LS ( This is +1 unit code of a motion sensor )
+
 Insteon Modules accepting X10 Commands - SL2LM ( 2477D )
 
 Please note that only the lamp module and Insteon Module has the dimming feature,
 so if have a switch that you want to be able to dim, define it as a LM.  And if
 you have a lamp that you do not want to be able to dim, define it as a WS.
+
+Motion Sensors, Reliability and Battery Life - As the motion sensor does not return
+any information regarding battery status, I'm using the daylight sensor feature of the
+motion sensor to determine if the sensor has stopped responding.  If the daylight sensor
+has not changed status within 18 hours, it will set the low battery alert for the Light Sensor.
+
+To enable this feature, please include a LS ALIAS after your motion sensor in the x10.conf
+
+ALIAS Garden_Motion B1 MS14A
+ALIAS Garden_Motion B2 LS
+
 
 # Installation
 

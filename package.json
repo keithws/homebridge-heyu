@@ -20,7 +20,9 @@
     "node": ">=0.12.0",
     "homebridge": ">=0.2.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "debug": "^2.2.0"
+  },
   "author": "NorthernMan54",
   "license": "Apache-2.0",
   "bugs": {

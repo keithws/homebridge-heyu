@@ -13,6 +13,7 @@
 
 "use strict";
 
+var debug = require('debug')('Heyu');
 var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
 var spawn = require('child_process').spawn;
@@ -238,11 +239,20 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
         case "MS13A":
         case "MS14A":
         case "MS16A":
+            other.lastheard = Date.now();
             other.service.getCharacteristic(Characteristic.MotionDetected)
                 .getValue();
             break;
+        case "LS":
+            //    debug(JSON.stringify(other, null, 2));
+            other.lastheard = Date.now();
+            other.service.getCharacteristic(Characteristic.StatusLowBattery)
+                .getValue();
+            other.service.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
+                .getValue();
+            break;
         default:
-            this.log.error("No events defined for Module Type %s", this.module);
+            this.log.error("No events defined for Module Type %s", other.module);
     }
 
 }
@@ -379,10 +389,24 @@ HeyuAccessory.prototype = {
             case "MS14A":
             case "MS16A":
                 this.log("Motion Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.battery = Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+                this.lastheard = Date.now();
                 this.service = new Service.MotionSensor(this.name);
                 this.service
                     .getCharacteristic(Characteristic.MotionDetected)
                     .on('get', this.getPowerState.bind(this));
+                services.push(this.service);
+                break;
+            case "LS":
+                this.log("Light Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
+                this.lastheard = Date.now();
+                this.service = new Service.LightSensor(this.name);
+                this.service
+                    .getCharacteristic(Characteristic.CurrentAmbientLightLevel)
+                    .on('get', this.getLightSensor.bind(this));
+                this.service
+                    .getCharacteristic(Characteristic.StatusLowBattery)
+                    .on('get', this.getBattery.bind(this));
                 services.push(this.service);
                 break;
             case "Temperature":
@@ -399,6 +423,44 @@ HeyuAccessory.prototype = {
     },
 
     //start of Heyu Functions
+
+    getBattery: function(callback) {
+        debug("Battery", ((new Date().getTime()) - this.lastheard));
+        // 18 Hours = 18 Hours * 60 Minutes * 60 Seconds * 1000 milliseconds
+        if ((Date.now() - this.lastheard) > 18*60*60*1000) {
+            callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
+        } else {
+            callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
+        }
+    },
+
+    getLightSensor: function(callback) {
+        if (!this.status_command) {
+            this.log.warn("Ignoring request; No status command defined.");
+            callback(new Error("No status command defined."));
+            return;
+        }
+
+        if (this.statusHandling == "no") {
+            this.log.warn("Ignoring request; No status handling not available.");
+            callback(new Error("No status handling defined."));
+            return;
+        }
+
+        exec(heyuExec, [this.status_command, this.housecode], function(error, responseBody, stderr) {
+            if (error !== null) {
+                this.log('Heyu onstate function failed: ' + error);
+                callback(error);
+            } else {
+                var binaryState = parseInt(responseBody) * 100000;
+                this.log("Light Sensor of %s %s", this.housecode, binaryState);
+                callback(null, binaryState);
+                this.powerOn = binaryState;
+            }
+        }.bind(this));
+
+    },
+
 
     setPowerState: function(powerOn, callback) {
         var housecode;
@@ -549,9 +611,9 @@ HeyuAccessory.prototype = {
                 this.log("Set preset %s %s %s %s", housecode, level, parseInt((level / 3.125) + .9), parseInt(parseInt((level / 3.125) + .9) * 3.125));
                 var other = this;
                 other.service.getCharacteristic(Characteristic.On)
-                       .getValue();
-                   other.service.getCharacteristic(Characteristic.Brightness)
-                       .getValue();
+                    .getValue();
+                other.service.getCharacteristic(Characteristic.Brightness)
+                    .getValue();
                 callback(null);
             }
         }.bind(this));
