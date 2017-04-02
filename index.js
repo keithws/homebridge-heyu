@@ -456,7 +456,7 @@ HeyuAccessory.prototype = {
                 this.log('Heyu onstate function failed: ' + error);
                 callback(error);
             } else {
-                var binaryState = parseInt(responseBody) * 99999 + 1;
+                var binaryState = (parseInt(responseBody) -1) * -99999 + 1;
                 this.log("Light Sensor of %s %s", this.housecode, binaryState);
                 callback(null, binaryState);
                 this.powerOn = binaryState;
