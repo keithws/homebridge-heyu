@@ -385,12 +385,11 @@ HeyuAccessory.prototype = {
                 services.push(this.service);
                 break;
             case "MS10":
-            case "MS12A":
-            case "MS13A":
-            case "MS14A":
-            case "MS16A":
+            case "MS12":
+            case "MS13":
+            case "MS14":
+            case "MS16":
                 this.log("Motion Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
-                this.battery = Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
                 this.lastheard = Date.now();
                 this.service = new Service.MotionSensor(this.name);
                 this.service
@@ -398,8 +397,12 @@ HeyuAccessory.prototype = {
                     .on('get', this.getPowerState.bind(this));
                 services.push(this.service);
                 break;
-            case "NONE":
-                this.log("Light Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
+            case "MS10A":
+            case "MS12A":
+            case "MS13A":
+            case "MS14A":
+            case "MS16A":
+                this.log("Light/Dark Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.lastheard = Date.now();
                 this.service = new Service.LightSensor(this.name);
                 this.service
@@ -426,7 +429,7 @@ HeyuAccessory.prototype = {
     //start of Heyu Functions
 
     getBattery: function(callback) {
-        debug("Battery", ((new Date().getTime()) - this.lastheard));
+        debug("Battery", this.housecode,((Date.now() - this.lastheard));
         // 18 Hours = 18 Hours * 60 Minutes * 60 Seconds * 1000 milliseconds
         if ((Date.now() - this.lastheard) > 18 * 60 * 60 * 1000) {
             callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
@@ -545,11 +548,8 @@ HeyuAccessory.prototype = {
             return;
         }
 
-
         var housecode = this.housecode;
         var command = this.brightness_command;
-
-
 
         exec(heyuExec, [command, housecode], function(error, responseBody, stderr) {
             if (error !== null) {
