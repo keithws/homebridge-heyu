@@ -429,7 +429,7 @@ HeyuAccessory.prototype = {
     //start of Heyu Functions
 
     getBattery: function(callback) {
-        debug("Battery", this.housecode,((Date.now() - this.lastheard));
+        debug("Battery", this.housecode,(Date.now() - this.lastheard));
         // 18 Hours = 18 Hours * 60 Minutes * 60 Seconds * 1000 milliseconds
         if ((Date.now() - this.lastheard) > 18 * 60 * 60 * 1000) {
             callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
