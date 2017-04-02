@@ -235,15 +235,19 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
                 .getValue();
             break;
         case "MS10":
-        case "MS12A":
-        case "MS13A":
-        case "MS14A":
-        case "MS16A":
+        case "MS12":
+        case "MS13":
+        case "MS14":
+        case "MS16":
             other.lastheard = Date.now();
             other.service.getCharacteristic(Characteristic.MotionDetected)
                 .getValue();
             break;
-        case "LS":
+        case "MS10A":
+        case "MS12A":
+        case "MS13A":
+        case "MS14A":
+        case "MS16A":
             //    debug(JSON.stringify(other, null, 2));
             other.lastheard = Date.now();
             other.service.getCharacteristic(Characteristic.StatusLowBattery)
@@ -394,7 +398,7 @@ HeyuAccessory.prototype = {
                     .on('get', this.getPowerState.bind(this));
                 services.push(this.service);
                 break;
-            case "LS":
+            case "NONE":
                 this.log("Light Sensor: Adding %s %s as a %s", this.name, this.housecode, this.module);
                 this.lastheard = Date.now();
                 this.service = new Service.LightSensor(this.name);
@@ -424,7 +428,7 @@ HeyuAccessory.prototype = {
     getBattery: function(callback) {
         debug("Battery", ((new Date().getTime()) - this.lastheard));
         // 18 Hours = 18 Hours * 60 Minutes * 60 Seconds * 1000 milliseconds
-        if ((Date.now() - this.lastheard) > 18*60*60*1000) {
+        if ((Date.now() - this.lastheard) > 18 * 60 * 60 * 1000) {
             callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
         } else {
             callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
@@ -449,7 +453,7 @@ HeyuAccessory.prototype = {
                 this.log('Heyu onstate function failed: ' + error);
                 callback(error);
             } else {
-                var binaryState = parseInt(responseBody) * 100000;
+                var binaryState = parseInt(responseBody) * 99999 + 1;
                 this.log("Light Sensor of %s %s", this.housecode, binaryState);
                 callback(null, binaryState);
                 this.powerOn = binaryState;
