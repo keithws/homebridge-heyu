@@ -53,6 +53,7 @@ function HeyuPlatform(log, config) {
     x10conf = config.x10conf || "/etc/heyu/x10.conf";
     useFireCracker = config.useFireCracker || false;
     cputemp = config.cputemp;
+    this.housecode = readHousecode();
 
     if (useFireCracker) {
         enableFireCracker();
@@ -81,6 +82,21 @@ function readX10config() {
         };
     }
     return x10confObject;
+}
+
+function readHousecode() {
+    var fs = require('fs');
+    var x10confObject = {};
+
+    var x10confData = fs.readFileSync(x10conf);
+    var pattern = new RegExp('\nHOUSECODE.*', 'ig');
+
+    var match = [];
+    match = pattern.exec(x10confData);
+    var line = match[0].split(/[ \t]+/);
+    var housecode = line[1];
+    debug("HOUSECODE",housecode);
+    return housecode;
 }
 
 function enableFireCracker() {
@@ -113,14 +129,14 @@ HeyuPlatform.prototype = {
         {
             var device;
             device.name = "All Devices";
-            device.housecode = "A";
+            device.housecode = this.housecode;
             device.module = "Macro-allon";
             var accessory = new HeyuAccessory(self.log, device, null);
             foundAccessories.push(accessory);
         } {
             var device;
             device.name = "All Lights";
-            device.housecode = "A";
+            device.housecode = this.housecode;
             device.module = "Macro-lightson";
             var accessory = new HeyuAccessory(self.log, device, null);
             foundAccessories.push(accessory);
@@ -484,6 +500,7 @@ HeyuAccessory.prototype = {
             command = this.off_command;
         }
 
+        debug("HeyuCommand",heyuExec, command, housecode);
         exec(heyuExec, [command, housecode], function(error, stdout, stderr) {
             if (error !== null) {
                 this.log('exec error: ' + error);
