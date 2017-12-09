@@ -18,7 +18,7 @@ engine is running.  ie have this in your x10.conf
 START_ENGINE  AUTO
 
 Also included are two macro's, "All Devices" and "All Lights", which map to the
-commands allon/alloff and lightson/lightsoff on housecode A.
+commands allon/alloff and lightson/lightsoff.  These are sent to the housecode configured in your x10.conf.
 
 On, off, bright and dim commands can also be sent via the CM17A FireCracker module
 by setting "useFireCracker" to **true** in the configuration settings.
@@ -87,6 +87,8 @@ echo $cpuTemp1" C"
 ```
 
 # ToDo
+
+* Improve performance of the plugin and responsiveness of the Home app by removing the get function.
 
 # Credits
 Firecracker commands and additional modules - W7RZL
