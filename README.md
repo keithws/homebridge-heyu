@@ -72,6 +72,10 @@ running
 * For the configuration of Accessories, homebridge-heyu reads your x10.conf and creates an accessory for each ALIAS. The type of accessory is based on the module type.
 * For the all-on/all-off macros, HOUSECODE is used to determine which housecode to use for the functions.  You must have HOUSECODE set in x10.conf or else the plugin will not work, and homebridge will not start.
 
+# Known Issues
+
+* Missing HOUSECODE from x10.conf causes homebridge to crash during startup.
+
 # cputemp
 
 Is a shell script I have installed on all my machines to monitor CPU
@@ -91,7 +95,10 @@ echo $cpuTemp1" C"
 
 # ToDo
 
-* Improve performance of the plugin and responsiveness of the Home app by removing the get function.
+* [ ] Improve performance of the plugin and responsiveness of the Home app by removing the get function.
+* [ ] Use tail rather than heyu monitor to monitor for events
+* [ ] Stop Missing HOUSECODE from x10.conf causing homebridge to crash during startup.
+* [ ] Bad x10.conf causing homebridge to crash during startup.
 
 # Credits
 Firecracker commands and additional modules - W7RZL
