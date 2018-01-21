@@ -25,17 +25,17 @@ by setting "useFireCracker" to **true** in the configuration settings.
 
 # Modules Types Supported
 
-Lamp Module ( Light Bulb ) - LM, LM12, LM465, StdLM
+* Lamp Module ( Light Bulb ) - LM, LM12, LM465, StdLM
 
-Appliance Module ( Outlet ) - AM, AMS, AM12, StdAM
+* Appliance Module ( Outlet ) - AM, AMS, AM12, StdAM
 
-Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
+* Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
 
-Motion Sensor - MS10, MS12, MS13, MS14, MS16
+* Motion Sensor - MS10, MS12, MS13, MS14, MS16
 
-Light/Dark Sensor - MS10A, MS12A, MS13A, MS14A, MS16A ( This is +1 unit code of the motion sensor )
+* Light/Dark Sensor - MS10A, MS12A, MS13A, MS14A, MS16A ( This is +1 unit code of the motion sensor )
 
-Insteon Modules accepting X10 Commands - SL2LM ( 2477D )
+* Insteon Modules accepting X10 Commands - SL2LM ( 2477D )
 
 Please note that only the lamp module and Insteon Module has the dimming feature,
 so if have a switch that you want to be able to dim, define it as a LM.  And if
@@ -69,7 +69,10 @@ running
    }]
 ```
 
-#cputemp
+* For the configuration of Accessories, homebridge-heyu reads your x10.conf and creates an accessory for each ALIAS. The type of accessory is based on the module type.
+* For the all-on/all-off macros, HOUSECODE is used to determine which housecode to use for the functions.  You must have HOUSECODE set in x10.conf or else the plugin will not work, and homebridge will not start.
+
+# cputemp
 
 Is a shell script I have installed on all my machines to monitor CPU
 temperature's.  This will showup with the name of the machine running homebridge.
