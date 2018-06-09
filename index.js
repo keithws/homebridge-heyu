@@ -72,7 +72,7 @@ function runQueue () {
             var callback = args[args.length - 1];
             args[args.length - 1] = function () {
 
-                callback();
+                callback.apply(null, arguments);
                 heyuQueue.isRunning = false;
                 runQueue();
 
