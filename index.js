@@ -18,6 +18,7 @@ var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
 var spawn = require('child_process').spawn;
 var os = require("os");
+var fs = require('fs');
 var heyuExec, cputemp, x10conf, useFireCracker;
 var noMotionTimer;
 var X10Commands = {
@@ -64,7 +65,6 @@ function HeyuPlatform(log, config) {
 }
 
 function readX10config() {
-    var fs = require('fs');
     var x10confObject = {};
 
     var x10confData = fs.readFileSync(x10conf);
@@ -85,18 +85,19 @@ function readX10config() {
 }
 
 function readHousecode() {
-    var fs = require('fs');
-    var x10confObject = {};
 
-    var x10confData = fs.readFileSync(x10conf);
-    var pattern = new RegExp('\nHOUSECODE.*', 'ig');
+    var housecode = "A"; // heyu defualt
+    var x10confData = fs.readFileSync(x10conf, "utf8");
 
-    var match = [];
-    match = pattern.exec(x10confData);
-    var line = match[0].split(/[ \t]+/);
-    var housecode = line[1];
+    // filter out comments
+    x10confData = x10confData.replace(/#.*?\n/g, "\n");
+    var matches = x10confData.match(/HOUSECODE\s+([A-P])/i);
+    if (matches) {
+        housecode = matches[1];
+    }
     debug("HOUSECODE",housecode);
     return housecode;
+
 }
 
 function enableFireCracker() {
