@@ -18,7 +18,7 @@ var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
 var spawn = require('child_process').spawn;
 var os = require("os");
-var heyuExec, cputemp, x10conf, useFireCracker;
+var heyuExec, heyuQueue, cputemp, x10conf, useFireCracker;
 var noMotionTimer;
 var X10Commands = {
     on: "on",
@@ -43,6 +43,55 @@ module.exports = function(homebridge) {
 
     homebridge.registerPlatform("homebridge-heyu", "Heyu", HeyuPlatform);
 };
+
+heyuQueue = {
+    items: [],
+    isRunning: false
+};
+
+function execQueue() {
+
+    // push these args to the end of the queue
+    heyuQueue.items.push(arguments);
+
+    // run the queue
+    runQueue();
+
+}
+
+function runQueue () {
+
+    if (!heyuQueue.isRunning && heyuQueue.items.length > 0) {
+
+        heyuQueue.isRunning = true;
+        var args = heyuQueue.items.shift();
+
+        if (args.length > 1) {
+
+            // wrap callback with another function to toggle isRunning
+            var callback = args[args.length - 1];
+            args[args.length - 1] = function () {
+
+                callback.apply(null, arguments);
+                heyuQueue.isRunning = false;
+                runQueue();
+
+            };
+
+        } else {
+
+            // add callback to toggle isRunning
+            args.push(function () {
+                heyuQueue.isRunning = false;
+                runQueue();
+            });
+
+        }
+        exec.apply(null, args);
+
+    }
+
+}
 
 function HeyuPlatform(log, config) {
     this.log = log;
@@ -467,7 +516,7 @@ HeyuAccessory.prototype = {
             return;
         }
 
-        exec(heyuExec, [this.status_command, this.housecode], function(error, responseBody, stderr) {
+        execQueue(heyuExec, [this.status_command, this.housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu onstate function failed: ' + error);
                 callback(error);
@@ -501,7 +550,7 @@ HeyuAccessory.prototype = {
         }
 
         debug("HeyuCommand",heyuExec, command, housecode);
-        exec(heyuExec, [command, housecode], function(error, stdout, stderr) {
+        execQueue(heyuExec, [command, housecode], function(error, stdout, stderr) {
             if (error !== null) {
                 this.log('exec error: ' + error);
                 this.log('Heyu set power function failed!');
@@ -537,7 +586,7 @@ HeyuAccessory.prototype = {
         var command = this.status_command;
 
 
-        exec(heyuExec, [command, housecode], function(error, responseBody, stderr) {
+        execQueue(heyuExec, [command, housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu onstate function failed: ' + error);
                 callback(error);
@@ -568,7 +617,7 @@ HeyuAccessory.prototype = {
         var housecode = this.housecode;
         var command = this.brightness_command;
 
-        exec(heyuExec, [command, housecode], function(error, responseBody, stderr) {
+        execQueue(heyuExec, [command, housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu function failed: ' + error);
                 callback(error);
@@ -595,7 +644,7 @@ HeyuAccessory.prototype = {
             return;
         }
 
-        exec(heyuExec, [X10Commands.rawlevel, this.housecode], function(error, responseBody, stderr) {
+        execQueue(heyuExec, [X10Commands.rawlevel, this.housecode], function(error, responseBody, stderr) {
             if (error !== null) {
                 this.log('Heyu function failed: ' + error);
                 callback(error);
@@ -619,7 +668,7 @@ HeyuAccessory.prototype = {
             var current = this.brightness;
         }
 
-        exec(heyuExec, [X10Commands.preset, housecode, parseInt((level / 3.125) + .9)], function(error, stdout, stderr) {
+        execQueue(heyuExec, [X10Commands.preset, housecode, parseInt((level / 3.125) + .9)], function(error, stdout, stderr) {
             if (error !== null) {
                 this.log('Heyu preset function failed: %s', error);
                 callback(error);
@@ -663,7 +712,7 @@ HeyuAccessory.prototype = {
 
         if (delta > 1) {
 
-            exec(heyuExec, [command, housecode, delta], function(error, stdout, stderr) {
+            execQueue(heyuExec, [command, housecode, delta], function(error, stdout, stderr) {
                 if (error !== null) {
                     this.log('Heyu brightness function failed: %s', error);
                     callback(error);

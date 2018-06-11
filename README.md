@@ -99,6 +99,7 @@ echo $cpuTemp1" C"
 * [ ] Use tail rather than heyu monitor to monitor for events
 * [ ] Stop Missing HOUSECODE from x10.conf causing homebridge to crash during startup.
 * [ ] Bad x10.conf causing homebridge to crash during startup.
+* [ ] analyze queued up heyu commands and consolidate where possible (same command and same housecode)
 
 # Credits
 Firecracker commands and additional modules - W7RZL
