@@ -102,4 +102,6 @@ echo $cpuTemp1" C"
 * [ ] analyze queued up heyu commands and consolidate where possible (same command and same housecode)
 
 # Credits
-Firecracker commands and additional modules - W7RZL
+
+* W7RZL - Firecracker commands and additional modules
+* keithws - Command queueing
