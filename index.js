@@ -119,10 +119,10 @@ function heyuShowAliases() {
 
   var aliases, lines, stdout;
 
-  stdout = execSync(this.config.heyuExec, ["show", "aliases"], {
+  stdout = execSync(heyuExec, ["show", "aliases"], {
     "encoding": "utf8"
   });
-  lines = stdout.split("\n").slice(1, -1);
+  lines = stdout.split("\n").slice(1, -2);
   aliases = lines.map(function (line) {
 
     var alias, words;
@@ -148,7 +148,7 @@ function readHousecode() {
 
   var housecode, matches, stdout;
 
-  stdout = execSync(this.config.heyuExec, ["info"], { encoding: "utf8" });
+  stdout = execSync(heyuExec, ["info"], { encoding: "utf8" });
   matches = stdout.match(/Housecode = ([A-P])/);
   if (matches) {
     housecode = matches[1];
@@ -185,7 +185,7 @@ HeyuPlatform.prototype = {
         "module": alias.moduleType
       };
 
-      this.log("Found in x10.conf: %s %s %s", device.name, device.housecode, device.module);
+      self.log("Found in x10.conf: %s %s %s", device.name, device.housecode, device.module);
       var accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
       var housecode = device.housecode;
@@ -194,14 +194,14 @@ HeyuPlatform.prototype = {
     });
     // Built-in accessories and macro's
     {
-      var device;
+      var device = {};
       device.name = "All Devices";
       device.housecode = this.housecode;
       device.module = "Macro-allon";
       var accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
     } {
-      var device;
+      var device = {};
       device.name = "All Lights";
       device.housecode = this.housecode;
       device.module = "Macro-lightson";
