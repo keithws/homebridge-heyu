@@ -82,10 +82,9 @@ function runQueue() {
 
       // add callback to toggle isRunning
       args[args.length] = function() {
-        cmdQueue.isRunning = false;
+        heyuQueue.isRunning = false;
         runQueue();
       };
-
       args.length = args.length + 1;
 
     }
