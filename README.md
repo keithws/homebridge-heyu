@@ -98,7 +98,7 @@ echo $cpuTemp1" C"
 * [ ] Improve performance of the plugin and responsiveness of the Home app by removing the get function.
 * [ ] Use tail rather than heyu monitor to monitor for events
 * [x] Stop Missing HOUSECODE from x10.conf causing homebridge to crash during startup.
-* [ ] Bad x10.conf causing homebridge to crash during startup.
+* [x] Bad x10.conf causing homebridge to crash during startup.
 * [ ] analyze queued up heyu commands and consolidate where possible (same command and same housecode)
 
 # Credits
