@@ -16,6 +16,7 @@
 var debug = require('debug')('Heyu');
 var Accessory, Characteristic, PowerConsumption, Service, uuid;
 var exec = require('child_process').execFile;
+var execSync = require('child_process').execFileSync;
 var spawn = require('child_process').spawn;
 var os = require("os");
 var heyuExec, heyuQueue, cputemp, x10conf, useFireCracker;
@@ -113,40 +114,48 @@ function HeyuPlatform(log, config) {
   this.devices = this.config.devices;
 }
 
-function readX10config() {
-  var fs = require('fs');
-  var x10confObject = {};
+function heyuShowAliases() {
 
-  var x10confData = fs.readFileSync(x10conf);
-  var pattern = new RegExp('\nalias.*', 'ig');
+  var aliases, lines, stdout;
 
-  // ALIAS Front_Porch A1 StdLM
+  stdout = execSync(heyuExec, ["show", "aliases"], {
+    "encoding": "utf8"
+  });
+  lines = stdout.split("\n").slice(1, -2);
+  aliases = lines.map(function (line) {
 
-  var match = [];
-  while ((match = pattern.exec(x10confData)) != null) {
-    var line = match[0].split(/[ \t]+/);
-    x10confObject[line[1]] = {
-      'name': line[1].replace(/_/g, ' '),
-      'housecode': line[2],
-      'module': line[3]
+    var alias, words;
+
+    words = line.split(/\s+/);
+    alias = {
+      "label": words[2],
+      "housecode": words[3].slice(0, 1),
+      "devices": words[3].slice(1),
+      "moduleType": words[4],
+      "moduleOption": words[5],
     };
-  }
-  return x10confObject;
+
+    return alias;
+
+  });
+
+  return aliases;
+
 }
 
 function readHousecode() {
-  var fs = require('fs');
-  var x10confObject = {};
 
-  var x10confData = fs.readFileSync(x10conf);
-  var pattern = new RegExp('\nHOUSECODE.*', 'ig');
+  var housecode, matches, stdout;
 
-  var match = [];
-  match = pattern.exec(x10confData);
-  var line = match[0].split(/[ \t]+/);
-  var housecode = line[1];
-  debug("HOUSECODE", housecode);
+  stdout = execSync(heyuExec, ["info"], { encoding: "utf8" });
+  matches = stdout.match(/Housecode = ([A-P])/);
+  if (matches) {
+    housecode = matches[1];
+  }
+  debug("HOUSECODE",housecode);
+
   return housecode;
+
 }
 
 function enableFireCracker() {
@@ -165,26 +174,33 @@ HeyuPlatform.prototype = {
     var foundAccessories = [];
     var self = this;
     //
-    var devices = new readX10config();
+    var aliases = heyuShowAliases();
 
-    for (var i in devices) {
-      var device = devices[i];
-      this.log("Found in x10.conf: %s %s %s", device.name, device.housecode, device.module);
+    aliases.forEach(function (alias) {
+
+      var device = {
+        "name": alias.label.replace(/[_.-]/g, " "),
+        "housecode": alias.housecode + alias.devices,
+        "module": alias.moduleType
+      };
+
+      self.log("Found in x10.conf: %s %s %s", device.name, device.housecode, device.module);
       var accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
       var housecode = device.housecode;
       self.faccessories[housecode] = accessory;
-    }
+
+    });
     // Built-in accessories and macro's
     {
-      var device;
+      var device = {};
       device.name = "All Devices";
       device.housecode = this.housecode;
       device.module = "Macro-allon";
       var accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
     } {
-      var device;
+      var device = {};
       device.name = "All Lights";
       device.housecode = this.housecode;
       device.module = "Macro-lightson";
