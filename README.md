@@ -100,6 +100,10 @@ echo $cpuTemp1" C"
 * [x] Stop Missing HOUSECODE from x10.conf causing homebridge to crash during startup.
 * [x] Bad x10.conf causing homebridge to crash during startup.
 * [ ] analyze queued up heyu commands and consolidate where possible (same command and same housecode)
+* [ ] expand module type coverage to all appliance and lamp types defined in the x10config man page for heyu
+* [ ] rewrite Modules Types Supported section above
+* [ ] improve consistency of dimming standard lamp modules by rounding dim levels to multiples of five
+* [ ] implement xpreset dimming for LM456-1 and others
 
 # Credits
 
