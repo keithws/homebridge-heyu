@@ -466,7 +466,7 @@ HeyuAccessory.prototype = {
           this.service
             .addCharacteristic(new Characteristic.Brightness())
             .setProps({
-              minStep: 4.54
+              minStep: 5
             })
             .on('get', this.getBrightness.bind(this))
             .on('set', this.setBrightness.bind(this));
@@ -486,6 +486,7 @@ HeyuAccessory.prototype = {
           this.service
             .addCharacteristic(new Characteristic.Brightness())
             .setProps({
+              format: Characteristic.Formats.FLOAT,
               minValue: 3,
               minStep: 3.125
             })
@@ -716,6 +717,9 @@ HeyuAccessory.prototype = {
       } else {
         var binaryState = parseInt(responseBody);
         this.log("Got brightness level of %s %s", housecode, binaryState);
+        // round to nearest five
+        binaryState = Math.round(binaryState / 5) * 5;
+        debug("DIMLEVEL", binaryState);
         this.brightness = binaryState;
         callback(null, binaryState);
       }
@@ -794,16 +798,19 @@ HeyuAccessory.prototype = {
 
     if (level > current) {
       var command = X10Commands.bright;
-      var delta = parseInt((level - current) / 4.54);
-    } else {
+      var delta = Math.round((level - current) / 5);
+    } else if (level < current) {
       var command = X10Commands.dim;
-      var delta = parseInt((current - level) / 4.54);
+      var delta = Math.round((current - level) / 5);
+    } else {
+      return callback();
     }
 
     // Keyboard debouncing
 
-    if (delta > 1) {
+    if (delta >= 1) {
 
+      debug("HeyuCommand", heyuExec, command, housecode, delta);
       execQueue(heyuExec, [command, housecode, delta], function(error, stdout, stderr) {
         if (error !== null) {
           this.log('Heyu brightness function failed: %s', error);
