@@ -103,6 +103,7 @@ echo $cpuTemp1" C"
 * [ ] expand module type coverage to all appliance and lamp types defined in the x10config man page for heyu
 * [ ] rewrite Modules Types Supported section above
 * [ ] improve consistency of dimming standard lamp modules by rounding dim levels to multiples of five
+* [ ] implement SmartHome's Implmentation of Pre-Set Dim
 * [ ] implement xpreset dimming for LM456-1 and others
 
 # Credits
