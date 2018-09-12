@@ -294,23 +294,58 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
   var other = accessory;
   switch (other.module) {
     case "AM":
-    case "AMS":
-    case "AM12":
     case "StdAM":
+    case "AM486":
+    case "AM466":
+    case "PAM01":
+    case "PAM02":
+    case "AM12":
+    case "SR227":
+    case "PA011":
+    case "AMS":
+    case "RR501":
+    case "PAT01":
+    case "RAIN8II":
     case "WS":
-    case "WS-1":
     case "WS467":
-    case "WS467-1":
+    case "WS13A":
     case "XPS3":
-    case "StdWS":
+    case "LM15A":
+    case "PSM04":
+    case "LM15":
+    case "AM14A":
+    case "AM15A":
+    case "PAM21":
+    case "PAM22":
+    case "SL1AM":
+    case "SL2AM":
+    case "RS114":
+    case "RF234":
       other.service.getCharacteristic(Characteristic.On)
         .getValue();
       break;
+    case "LM465-1":
+    case "LM-1":
     case "LM":
-    case "LM12":
-    case "LM465":
     case "StdLM":
+    case "LM465":
+    case "PLM01":
+    case "PLM03":
+    case "LM12":
+    case "LMS":
+    case "WS467-1":
+    case "WS-1":
+    case "LW10U":
+    case "WS12A":
+    case "XPD3":
+    case "LM14A":
+    case "PLM21":
+    case "SL1LM":
     case "SL2LM":
+    case "SL2380W":
+    case "LL1LM":
+    case "LL2LM":
+    case "LL2000STW":
       other.service.getCharacteristic(Characteristic.Brightness)
         .getValue();
       other.service.getCharacteristic(Characteristic.On)
@@ -394,10 +429,32 @@ HeyuAccessory.prototype = {
 
         services.push(this.service);
         break;
+      case "LM465-1":
+      case "LM-1":
       case "LM":
-      case "LM12":
-      case "LM465":
       case "StdLM":
+      case "LM465":
+      case "PLM01":
+      case "PLM03":
+      case "LM12":
+      case "LMS":
+      case "WS467-1":
+      case "WS-1":
+      case "LW10U":
+      case "WS12A":
+      case "XPD3":
+      case "LM14A":
+      case "PLM21":
+      case "SL1LM":
+      case "SL2LM":
+      case "SL2380W":
+      case "LL1LM":
+      case "LL2LM":
+      case "LL2000STW":
+      case "LM15A":
+      case "PSM04":
+      case "LM15":
+        // lamp modules (dimmable outlets and dimmable switches)
         this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.service = new Service.Lightbulb(this.name);
         this.service
@@ -418,7 +475,7 @@ HeyuAccessory.prototype = {
         services.push(this.service);
         break;
       case "SL2LM":
-        this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+        this.log("SL2LM: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.service = new Service.Lightbulb(this.name);
         this.service
           .getCharacteristic(Characteristic.On)
@@ -439,12 +496,27 @@ HeyuAccessory.prototype = {
         services.push(this.service);
         break;
       case "AM":
-      case "AMS":
-      case "AM12":
       case "StdAM":
+      case "AM486":
+      case "AM466":
+      case "PAM01":
+      case "PAM02":
+      case "AM12":
+      case "SR227":
+      case "PA011":
+      case "AMS":
+      case "RR501":
+      case "PAT01":
+      case "RAIN8II":
+      case "AM14A":
+      case "AM15A":
+      case "PAM21":
+      case "PAM22":
+        // appliance modules with outlets (non-dimmable outlets)
         this.log("StdAM: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.dimmable = "no"; // All Appliance modules are not dimmable
         this.service = new Service.Outlet(this.name);
++        // TODO technically the Outlet service requires a OutletInUse characterist (would always be true)
         this.service
           .getCharacteristic(Characteristic.On)
           .on('get', this.getPowerState.bind(this))
@@ -452,11 +524,14 @@ HeyuAccessory.prototype = {
         services.push(this.service);
         break;
       case "WS":
-      case "WS-1":
       case "WS467":
-      case "WS467-1":
+      case "WS13A":
       case "XPS3":
-      case "StdWS":
+      case "SL1AM":
+      case "SL2AM":
+      case "RS114":
+      case "RF234":
+        // appliance modules with switches (non-dimmable switches)
         this.log("StdWS: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.dimmable = "no"; // Technically some X10 switches are dimmable, but we're treating them as on/off
         this.service = new Service.Switch(this.name);
