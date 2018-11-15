@@ -165,11 +165,15 @@ function enableFireCracker() {
   X10Commands.on = "fon";
   X10Commands.off = "foff";
   X10Commands.bright = "fbright";
+  X10Commands.preset = null;
   X10Commands.dim = "fdim";
   X10Commands.allon = "fallon";
   X10Commands.alloff = "falloff";
   X10Commands.lightson = "flightson";
   X10Commands.lightsoff = "flightsoff";
+  X10Commands.xon = "fon";
+  X10Commands.xoff = "foff";
+  X10Commands.xpreset = null;
 }
 
 HeyuPlatform.prototype = {
@@ -383,6 +387,25 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
 
 HeyuAccessory.prototype = {
 
+  setupStdLM: function () {
+    this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+    this.service = new Service.Lightbulb(this.name);
+    this.service
+      .getCharacteristic(Characteristic.On)
+      .on('get', this.getPowerState.bind(this))
+      .on('set', this.setPowerState.bind(this));
+    // Brightness Polling
+    if (this.dimmable == "yes") {
+      this.service
+        .addCharacteristic(new Characteristic.Brightness())
+        .setProps({
+          minStep: 1
+        })
+        .on('get', this.getBrightness.bind(this))
+        .on('set', this.setBrightness.bind(this));
+    }
+    return this.service;
+  },
   getServices: function() {
     var services = [];
     // set up the accessory information - not sure how mandatory any of this is.
@@ -447,24 +470,7 @@ HeyuAccessory.prototype = {
       case "PSM04":
       case "LM15":
         // lamp modules (standard) (dimmable outlets and dimmable switches)
-        this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
-        this.service = new Service.Lightbulb(this.name);
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .on('get', this.getPowerState.bind(this))
-          .on('set', this.setPowerState.bind(this));
-        // Brightness Polling
-        if (this.dimmable == "yes") {
-          this.service
-            .addCharacteristic(new Characteristic.Brightness())
-            .setProps({
-              minStep: 1
-            })
-            .on('get', this.getBrightness.bind(this))
-            .on('set', this.setBrightness.bind(this));
-        }
-
-        services.push(this.service);
+        services.push(this.setupStdLM());
         break;
       case "SL1LM":
       case "SL2LM":
@@ -473,25 +479,29 @@ HeyuAccessory.prototype = {
       case "LL2LM":
       case "LL2000STW":
         // lamp modules that support (old) preset
-        this.hasSupportForOldPreSetDim = true;
-        this.log("SL2LM: Adding %s %s as a %s", this.name, this.housecode, this.module);
-        this.service = new Service.Lightbulb(this.name);
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .on('get', this.getPowerState.bind(this))
-          .on('set', this.setPowerState.bind(this));
-        // Brightness Polling
-        if (this.dimmable == "yes") {
+        if (useFireCracker) {
+          // no preset command, fallback to dim/bright
+          services.push(this.setupStdLM());
+        } else {
+          this.hasSupportForOldPreSetDim = true;
+          this.log("SL2LM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+          this.service = new Service.Lightbulb(this.name);
           this.service
-            .addCharacteristic(new Characteristic.Brightness())
-            .setProps({
-              minStep: 1
-            })
-            .on('get', this.getBrightness.bind(this))
-            .on('set', this.setSLBrightness.bind(this));
+            .getCharacteristic(Characteristic.On)
+            .on('get', this.getPowerState.bind(this))
+            .on('set', this.setPowerState.bind(this));
+          // Brightness Polling
+          if (this.dimmable == "yes") {
+            this.service
+              .addCharacteristic(new Characteristic.Brightness())
+              .setProps({
+                minStep: 1
+              })
+              .on('get', this.getBrightness.bind(this))
+              .on('set', this.setSLBrightness.bind(this));
+          }
+          services.push(this.service);
         }
-
-        services.push(this.service);
         break;
       case "LM14A":
       case "LM465-1":
@@ -500,25 +510,29 @@ HeyuAccessory.prototype = {
       case "WS-1":
         // lamp modules that support some extended commands
         // at least xon, xoff, and xpreset
-        this.log("LM465-1: Adding %s %s as a %s", this.name, this.housecode, this.module);
-        this.hasPartialSupportForExtendedCodes = true;
-        this.service = new Service.Lightbulb(this.name);
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .on('get', this.getPowerState.bind(this))
-          .on('set', this.setPowerState.bind(this));
-        // Brightness Polling
-        if (this.dimmable == "yes") {
+        if (useFireCracker) {
+          // no preset command, fallback to dim/bright
+          services.push(this.setupStdLM());
+        } else {
+          this.log("LM465-1: Adding %s %s as a %s", this.name, this.housecode, this.module);
+          this.hasPartialSupportForExtendedCodes = true;
+          this.service = new Service.Lightbulb(this.name);
           this.service
-            .addCharacteristic(new Characteristic.Brightness())
-            .setProps({
-              minStep: 1
-            })
-            .on('get', this.getBrightness.bind(this))
-            .on('set', this.setBrightnessWithXpreset.bind(this));
+            .getCharacteristic(Characteristic.On)
+            .on('get', this.getPowerState.bind(this))
+            .on('set', this.setPowerState.bind(this));
+          // Brightness Polling
+          if (this.dimmable == "yes") {
+            this.service
+              .addCharacteristic(new Characteristic.Brightness())
+              .setProps({
+                minStep: 1
+              })
+              .on('get', this.getBrightness.bind(this))
+              .on('set', this.setBrightnessWithXpreset.bind(this));
+          }
+          services.push(this.service);
         }
-
-        services.push(this.service);
         break;
       case "AM":
       case "StdAM":
