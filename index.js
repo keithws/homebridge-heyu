@@ -259,7 +259,7 @@ function HeyuAccessory(log, device, enddevice) {
   self.on_command = X10Commands.on;
   self.off_command = X10Commands.off;
   self.status_command = X10Commands.onstate;
-  self.brightness_command = X10Commands.rawlevel; // TODO dimlevel cannot be trusted
+  self.brightness_command = X10Commands.rawlevel; // dimlevel cannot be trusted
   self.statusHandling = "yes";
   self.dimmable = "yes";
 
@@ -654,6 +654,11 @@ HeyuAccessory.prototype = {
   setPowerState: function(powerOn, callback) {
     var housecode;
     var command;
+
+    if (this.hasPartialSupportForExtendedCodes || this.hasSupportForOldPreSetDim) {
+      this.on_command = X10Commands.xon;
+      this.off_command = X10Commands.xoff;
+    }
 
     if (!this.on_command || !this.off_command) {
       this.log.warn("Ignoring request; No power command defined.");
