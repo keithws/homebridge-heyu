@@ -25,11 +25,17 @@ by setting "useFireCracker" to **true** in the configuration settings.
 
 # Modules Types Supported
 
-* Lamp Module ( Light Bulb ) - LM, LM12, LM465, StdLM
+* Lamp Module ( Light Bulb ) - All lamp modules supported by heyu
+     * including LM, LM12, LM465, StdLM
+     * and SL1LM, SL2LM, LL1LM, and LL2LM with Pre-set dim codes
+     * and LM465-1, LM-1, LM14A with Extended codes
 
-* Appliance Module ( Outlet ) - AM, AMS, AM12, StdAM
+* Appliance Module ( Outlet ) - All appliance modules supported by heyu
+    * including AM, AMS, AM12, StdAM
 
-* Wall Switch ( Switch ) - WS, WS-1, WS467, WS467-1, XPS3, StdWS
+* Wall Switch ( Switch ) - All wall switch modules support by heyu
+    * including WS, WS-1, WS467, WS467-1, XPS3, StdWS
+    * and WS467-1 and WS-1 with Extended codes
 
 * Motion Sensor - MS10, MS12, MS13, MS14, MS16
 
@@ -37,9 +43,8 @@ by setting "useFireCracker" to **true** in the configuration settings.
 
 * Insteon Modules accepting X10 Commands - SL2LM ( 2477D )
 
-Please note that only the lamp module and Insteon Module has the dimming feature,
-so if have a switch that you want to be able to dim, define it as a LM.  And if
-you have a lamp that you do not want to be able to dim, define it as a WS.
+Please note that all dimmable modules have the dimming feature. If
+you have a lamp or wall switch that you do not want to be able to dim, define it as a non-dimmable wall switch or appliance module.
 
 Motion Sensors, Reliability and Battery Life - As the motion sensor does not return
 any information regarding battery status, I'm using the daylight sensor feature of the
@@ -100,11 +105,10 @@ echo $cpuTemp1" C"
 * [x] Stop Missing HOUSECODE from x10.conf causing homebridge to crash during startup.
 * [x] Bad x10.conf causing homebridge to crash during startup.
 * [ ] analyze queued up heyu commands and consolidate where possible (same command and same housecode)
-* [ ] expand module type coverage to all appliance and lamp types defined in the x10config man page for heyu
-* [ ] rewrite Modules Types Supported section above
-* [ ] improve consistency of dimming standard lamp modules by rounding dim levels to multiples of five
-* [ ] implement SmartHome's Implmentation of Pre-Set Dim
-* [ ] implement xpreset dimming for LM456-1 and others
+* [x] expand module type coverage to all appliance and lamp types defined in the x10config man page for heyu
+* [x] rewrite Modules Types Supported section above
+* [x] implement SmartHome's Implementation of Pre-Set Dim
+* [x] implement xpreset dimming for LM456-1 and others
 
 # Credits
 
