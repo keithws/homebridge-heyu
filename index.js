@@ -669,11 +669,6 @@ HeyuAccessory.prototype = {
     var housecode;
     var command;
 
-    if (this.hasPartialSupportForExtendedCodes || this.hasSupportForOldPreSetDim) {
-      this.on_command = X10Commands.xon;
-      this.off_command = X10Commands.xoff;
-    }
-
     if (!this.on_command || !this.off_command) {
       this.log.warn("Ignoring request; No power command defined.");
       callback(new Error("No power command defined."));
