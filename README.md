@@ -113,4 +113,4 @@ echo $cpuTemp1" C"
 # Credits
 
 * W7RZL - Firecracker commands and additional modules
-* keithws - Command queueing
+* keithws - Command queueing and enhanced dimming
