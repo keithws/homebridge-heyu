@@ -33,7 +33,10 @@ var X10Commands = {
   alloff: "alloff",
   lightson: "lightson",
   lightsoff: "lightsoff",
-  onstate: "onstate"
+  onstate: "onstate",
+  xon: "xon",
+  xoff: "xoff",
+  xpreset: "xpreset"
 };
 
 module.exports = function(homebridge) {
@@ -162,11 +165,15 @@ function enableFireCracker() {
   X10Commands.on = "fon";
   X10Commands.off = "foff";
   X10Commands.bright = "fbright";
+  X10Commands.preset = null;
   X10Commands.dim = "fdim";
   X10Commands.allon = "fallon";
   X10Commands.alloff = "falloff";
   X10Commands.lightson = "flightson";
   X10Commands.lightsoff = "flightsoff";
+  X10Commands.xon = "fon";
+  X10Commands.xoff = "foff";
+  X10Commands.xpreset = null;
 }
 
 HeyuPlatform.prototype = {
@@ -256,7 +263,7 @@ function HeyuAccessory(log, device, enddevice) {
   self.on_command = X10Commands.on;
   self.off_command = X10Commands.off;
   self.status_command = X10Commands.onstate;
-  self.brightness_command = X10Commands.dimlevel;
+  self.brightness_command = X10Commands.rawlevel; // dimlevel cannot be trusted
   self.statusHandling = "yes";
   self.dimmable = "yes";
 
@@ -294,23 +301,58 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
   var other = accessory;
   switch (other.module) {
     case "AM":
-    case "AMS":
-    case "AM12":
     case "StdAM":
+    case "AM486":
+    case "AM466":
+    case "PAM01":
+    case "PAM02":
+    case "AM12":
+    case "SR227":
+    case "PA011":
+    case "AMS":
+    case "RR501":
+    case "PAT01":
+    case "RAIN8II":
     case "WS":
-    case "WS-1":
     case "WS467":
-    case "WS467-1":
+    case "WS13A":
     case "XPS3":
-    case "StdWS":
+    case "LM15A":
+    case "PSM04":
+    case "LM15":
+    case "AM14A":
+    case "AM15A":
+    case "PAM21":
+    case "PAM22":
+    case "SL1AM":
+    case "SL2AM":
+    case "RS114":
+    case "RF234":
       other.service.getCharacteristic(Characteristic.On)
         .getValue();
       break;
+    case "LM465-1":
+    case "LM-1":
     case "LM":
-    case "LM12":
-    case "LM465":
     case "StdLM":
+    case "LM465":
+    case "PLM01":
+    case "PLM03":
+    case "LM12":
+    case "LMS":
+    case "WS467-1":
+    case "WS-1":
+    case "LW10U":
+    case "WS12A":
+    case "XPD3":
+    case "LM14A":
+    case "PLM21":
+    case "SL1LM":
     case "SL2LM":
+    case "SL2380W":
+    case "LL1LM":
+    case "LL2LM":
+    case "LL2000STW":
       other.service.getCharacteristic(Characteristic.Brightness)
         .getValue();
       other.service.getCharacteristic(Characteristic.On)
@@ -345,6 +387,25 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
 
 HeyuAccessory.prototype = {
 
+  setupStdLM: function () {
+    this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+    this.service = new Service.Lightbulb(this.name);
+    this.service
+      .getCharacteristic(Characteristic.On)
+      .on('get', this.getPowerState.bind(this))
+      .on('set', this.setPowerState.bind(this));
+    // Brightness Polling
+    if (this.dimmable == "yes") {
+      this.service
+        .addCharacteristic(new Characteristic.Brightness())
+        .setProps({
+          minStep: 1
+        })
+        .on('get', this.getBrightness.bind(this))
+        .on('set', this.setBrightness.bind(this));
+    }
+    return this.service;
+  },
   getServices: function() {
     var services = [];
     // set up the accessory information - not sure how mandatory any of this is.
@@ -395,68 +456,124 @@ HeyuAccessory.prototype = {
         services.push(this.service);
         break;
       case "LM":
-      case "LM12":
-      case "LM465":
       case "StdLM":
-        this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
-        this.service = new Service.Lightbulb(this.name);
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .on('get', this.getPowerState.bind(this))
-          .on('set', this.setPowerState.bind(this));
-        // Brightness Polling
-        if (this.dimmable == "yes") {
-          this.service
-            .addCharacteristic(new Characteristic.Brightness())
-            .setProps({
-              minStep: 4.54
-            })
-            .on('get', this.getBrightness.bind(this))
-            .on('set', this.setBrightness.bind(this));
-        }
-
-        services.push(this.service);
+      case "LM465":
+      case "PLM01":
+      case "PLM03":
+      case "LM12":
+      case "LMS":
+      case "LW10U":
+      case "WS12A":
+      case "XPD3":
+      case "PLM21":
+      case "LM15A":
+      case "PSM04":
+      case "LM15":
+        // lamp modules (standard) (dimmable outlets and dimmable switches)
+        services.push(this.setupStdLM());
         break;
+      case "SL1LM":
       case "SL2LM":
-        this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
-        this.service = new Service.Lightbulb(this.name);
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .on('get', this.getPowerState.bind(this))
-          .on('set', this.setPowerState.bind(this));
-        // Brightness Polling
-        if (this.dimmable == "yes") {
+      case "SL2380W":
+      case "LL1LM":
+      case "LL2LM":
+      case "LL2000STW":
+        // lamp modules that support (old) preset
+        if (useFireCracker) {
+          // no preset command, fallback to dim/bright
+          services.push(this.setupStdLM());
+        } else {
+          this.hasSupportForOldPreSetDim = true;
+          this.log("SL2LM: Adding %s %s as a %s", this.name, this.housecode, this.module);
+          this.service = new Service.Lightbulb(this.name);
           this.service
-            .addCharacteristic(new Characteristic.Brightness())
-            .setProps({
-              minValue: 3,
-              minStep: 3.125
-            })
-            .on('get', this.getSLBrightness.bind(this))
-            .on('set', this.setSLBrightness.bind(this));
+            .getCharacteristic(Characteristic.On)
+            .on('get', this.getPowerState.bind(this))
+            .on('set', this.setPowerState.bind(this));
+          // Brightness Polling
+          if (this.dimmable == "yes") {
+            this.service
+              .addCharacteristic(new Characteristic.Brightness())
+              .setProps({
+                minStep: 1
+              })
+              .on('get', this.getBrightness.bind(this))
+              .on('set', this.setSLBrightness.bind(this));
+          }
+          services.push(this.service);
         }
-
-        services.push(this.service);
+        break;
+      case "LM14A":
+      case "LM465-1":
+      case "LM-1":
+      case "WS467-1":
+      case "WS-1":
+        // lamp modules that support some extended commands
+        // at least xon, xoff, and xpreset
+        if (useFireCracker) {
+          // no preset command, fallback to dim/bright
+          services.push(this.setupStdLM());
+        } else {
+          this.log("LM465-1: Adding %s %s as a %s", this.name, this.housecode, this.module);
+          this.hasPartialSupportForExtendedCodes = true;
+          this.service = new Service.Lightbulb(this.name);
+          this.service
+            .getCharacteristic(Characteristic.On)
+            .on('get', this.getPowerState.bind(this))
+            .on('set', this.setPowerState.bind(this));
+          // Brightness Polling
+          if (this.dimmable == "yes") {
+            this.service
+              .addCharacteristic(new Characteristic.Brightness())
+              .setProps({
+                minStep: 1
+              })
+              .on('get', this.getBrightness.bind(this))
+              .on('set', this.setBrightnessWithXpreset.bind(this));
+          }
+          services.push(this.service);
+        }
         break;
       case "AM":
-      case "AMS":
-      case "AM12":
       case "StdAM":
+      case "AM486":
+      case "AM466":
+      case "PAM01":
+      case "PAM02":
+      case "AM12":
+      case "SR227":
+      case "PA011":
+      case "AMS":
+      case "RR501":
+      case "PAT01":
+      case "RAIN8II":
+      case "AM14A":
+      case "AM15A":
+      case "PAM21":
+      case "PAM22":
+        // appliance modules with outlets (non-dimmable outlets)
         this.log("StdAM: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.dimmable = "no"; // All Appliance modules are not dimmable
         this.service = new Service.Outlet(this.name);
+        // TODO technically the Outlet service requires a OutletInUse characterist (would always be true)
         this.service
           .getCharacteristic(Characteristic.On)
           .on('get', this.getPowerState.bind(this))
           .on('set', this.setPowerState.bind(this));
+        this.service
+          .getCharacteristic(Characteristic.OutletInUse)
+          .on('get', function (callback) { callback(null, true); });
         services.push(this.service);
         break;
       case "WS":
-      case "WS-1":
       case "WS467":
-      case "WS467-1":
+      case "WS13A":
       case "XPS3":
-      case "StdWS":
+      case "SL1AM":
+      case "SL2AM":
+      case "RS114":
+      case "RF234":
+        // appliance modules with switches (non-dimmable switches)
         this.log("StdWS: Adding %s %s as a %s", this.name, this.housecode, this.module);
         this.dimmable = "no"; // Technically some X10 switches are dimmable, but we're treating them as on/off
         this.service = new Service.Switch(this.name);
@@ -566,23 +683,24 @@ HeyuAccessory.prototype = {
       command = this.off_command;
     }
 
-    debug("HeyuCommand", heyuExec, command, housecode);
-    execQueue(heyuExec, [command, housecode], function(error, stdout, stderr) {
-      if (error !== null) {
-        this.log('exec error: ' + error);
-        this.log('Heyu set power function failed!');
-        callback(error);
-      } else {
-        this.powerOn = powerOn;
-        this.log("Set power state of %s to %s", housecode, command);
-        if (this.dimmable == "yes") {
-          var that = this;
-          that.service.getCharacteristic(Characteristic.Brightness)
-            .getValue();
-        }
-        callback();
+  debug("HeyuCommand", heyuExec, command, housecode);
+  execQueue(heyuExec, [command, housecode], function(error, stdout, stderr) {
+    if (error !== null) {
+      this.log('exec error: ' + error);
+      this.log('Heyu set power function failed!');
+      callback(error);
+    } else {
+      this.powerOn = powerOn;
+      this.log("Set power state of %s to %s", housecode, command);
+      if (this.dimmable == "yes") {
+        var that = this;
+        that.service.getCharacteristic(Characteristic.Brightness)
+          .getValue();
       }
-    }.bind(this));
+      callback();
+    }
+  }.bind(this));
+
   },
 
   getPowerState: function(callback) {
@@ -632,67 +750,43 @@ HeyuAccessory.prototype = {
     }
 
     var housecode = this.housecode;
-    var command = this.brightness_command;
 
-    execQueue(heyuExec, [command, housecode], function(error, responseBody, stderr) {
+    // NOTE dimlevel cannot be trusted
+    execQueue(heyuExec, [X10Commands.rawlevel, housecode], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu function failed: ' + error);
         callback(error);
       } else {
-        var binaryState = parseInt(responseBody);
-        this.log("Got brightness level of %s %s", housecode, binaryState);
-        this.brightness = binaryState;
-        callback(null, binaryState);
+        var rawlevel = parseInt(stdout);
+        if (this.hasPartialSupportForExtendedCodes) {
+          // NOTE documented limit is 63, but heyu reports 62 after setting 63
+          var percent = Math.round(rawlevel / 62 * 100);
+          this.log("Got brightness of %s/62 ( %s%% ) from %s", rawlevel, percent, housecode);
+        } else if (this.hasSupportForOldPreSetDim) {
+          var percent = preset2pct(parseInt(stdout));
+          this.log("Got brightness of %s/32 ( %s%% ) from %s", rawlevel, percent, housecode);
+        } else {
+          var percent = Math.round(rawlevel / 210 * 100);
+          this.log("Got brightness of %s/210 ( %s%% ) from %s", rawlevel, percent, housecode);
+        }
+        this.brightness = percent;
+        callback(null, percent);
       }
     }.bind(this));
 
   },
-
-  getSLBrightness: function(callback) {
-    if (!X10Commands.rawlevel) {
-      this.log.warn("Ignoring request; No rawlevel command defined.");
-      callback(new Error("No rawlevel command defined."));
-      return;
-    }
-
-    if (this.dimmable == "no") {
-      this.log.warn("Ignoring request; housecode not dimmable.");
-      callback(new Error("Device not dimmable."));
-      return;
-    }
-
-    execQueue(heyuExec, [X10Commands.rawlevel, this.housecode], function(error, responseBody, stderr) {
-      if (error !== null) {
-        this.log('Heyu function failed: ' + error);
-        callback(error);
-      } else {
-        var binaryState = parseInt(responseBody * 3.125);
-        this.log("Got SL brightness level of %s %s", this.housecode, binaryState);
-        this.brightness = binaryState;
-        callback(null, binaryState);
-      }
-    }.bind(this));
-
-  },
-
 
   setSLBrightness: function(level, callback) {
     var housecode = this.housecode;
 
-    if (isNaN(this.brightness) || !this.powerOn) {
-      var current = 0;
-    } else {
-      var current = this.brightness;
-    }
-
-    execQueue(heyuExec, [X10Commands.preset, housecode, parseInt((level / 3.125) + .9)], function(error, stdout, stderr) {
+    execQueue(heyuExec, [X10Commands.preset, housecode, pct2preset(level)], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu preset function failed: %s', error);
         callback(error);
       } else {
         this.brightness = level;
         this.powerOn = true;
-        this.log("Set preset %s %s %s %s", housecode, level, parseInt((level / 3.125) + .9), parseInt(parseInt((level / 3.125) + .9) * 3.125));
+        this.log("Set preset %s %s %s %s", housecode, level, pct2preset(level), preset2pct(pct2preset(level)));
         var other = this;
         other.service.getCharacteristic(Characteristic.On)
           .getValue();
@@ -701,13 +795,31 @@ HeyuAccessory.prototype = {
         callback(null);
       }
     }.bind(this));
-    //      } else {
-    //          this.log('Change too small, ignored');
-    //          callback(null);
-    //      }
   },
 
-  setBrightness: function(level, callback) {
+  setBrightnessWithXpreset: function(percent, callback) {
+    var housecode = this.housecode;
+
+    // NOTE documented limit is 63, but heyu reports 62 after setting 63
+    execQueue(heyuExec, [X10Commands.xpreset, housecode, Math.round(percent / 100 * 62)], function(error, stdout, stderr) {
+      if (error !== null) {
+        this.log('Heyu xpreset function failed: %s', error);
+        callback(error);
+      } else {
+        this.brightness = Math.round(Math.round(percent / 100 * 62) * 100 / 62);
+        this.powerOn = true;
+        this.log("Set xpreset %s %s %s %s", housecode, percent, Math.round(percent / 100 * 62), this.brightness);
+        var other = this;
+        other.service.getCharacteristic(Characteristic.On)
+          .getValue();
+        other.service.getCharacteristic(Characteristic.Brightness)
+          .getValue();
+        callback(null);
+      }
+    }.bind(this));
+  },
+
+  setBrightness: function(percent, callback) {
 
     var housecode = this.housecode;
 
@@ -717,38 +829,44 @@ HeyuAccessory.prototype = {
       var current = this.brightness;
     }
 
-    if (level > current) {
+    var delta = Math.abs(current - percent);
+    if (percent > current) {
       var command = X10Commands.bright;
-      var delta = parseInt((level - current) / 4.54);
-    } else {
+    } else if (percent < current) {
       var command = X10Commands.dim;
-      var delta = parseInt((current - level) / 4.54);
+    } else {
+      callback();
+      return;
     }
 
-    // Keyboard debouncing
+    var level = pctDelta2level(delta);
 
-    if (delta > 1) {
-
-      execQueue(heyuExec, [command, housecode, delta], function(error, stdout, stderr) {
-        if (error !== null) {
-          this.log('Heyu brightness function failed: %s', error);
-          callback(error);
-        } else {
-          this.brightness = level;
-          this.powerOn = true;
-          this.log("Set Bright/Dim %s %s %s ( %s % )", command, housecode, delta, level);
-          var other = this;
-          other.service.getCharacteristic(Characteristic.On)
-            .getValue();
-          other.service.getCharacteristic(Characteristic.Brightness)
-            .getValue();
-          callback();
-        }
-      }.bind(this));
-    } else {
+    // in theory you can dim in 1 step, but
+    // in practice `heyu dim HU 1` does nothing
+    if (level === 1) {
       this.log('Change too small, ignored');
       callback();
+      return;
     }
+
+    debug("HeyuCommand", heyuExec, command, housecode, level);
+    execQueue(heyuExec, [command, housecode, level], function(error, stdout, stderr) {
+      if (error !== null) {
+        this.log('Heyu brightness function failed: %s', error);
+        callback(error);
+      } else {
+        this.brightness = percent;
+        this.powerOn = true;
+        this.log("Set Bright/Dim %s %s %s ( %s % )", command, housecode, delta, percent);
+        var other = this;
+        other.service.getCharacteristic(Characteristic.On)
+          .getValue();
+        other.service.getCharacteristic(Characteristic.Brightness)
+          .getValue();
+        callback();
+      }
+    }.bind(this));
+
   },
 
   getTemperature: function(callback) {
@@ -771,70 +889,32 @@ HeyuAccessory.prototype = {
   }
 };
 
+/*
+ * SmartHome's Implmentation of Pre-Set Dim
+ * @url http://kbase.x10.com/wiki/Using_Pre-Set_Dim
+ */
 function pct2preset(percent) {
 
-  if (percent < 5) {
-    return 1;
-  } else if (percent <= 18) {
-    return 2;
-  } else if (percent <= 21) {
-    return 3;
-  } else if (percent <= 23) {
-    return 4;
-  } else if (percent <= 27) {
-    return 5;
-  } else if (percent <= 28) {
-    return 6;
-  } else if (percent <= 31) {
-    return 7;
-  } else if (percent <= 34) {
-    return 8;
-  } else if (percent <= 36) {
-    return 9;
-  } else if (percent <= 39) {
-    return 10;
-  } else if (percent <= 42) {
-    return 11;
-  } else if (percent <= 45) {
-    return 12;
-  } else if (percent <= 48) {
-    return 13;
-  } else if (percent <= 51) {
-    return 14;
-  } else if (percent <= 54) {
-    return 15;
-  } else if (percent <= 57) {
-    return 16;
-  } else if (percent <= 60) {
-    return 17;
-  } else if (percent <= 63) {
-    return 18;
-  } else if (percent <= 67) {
-    return 19;
-  } else if (percent <= 70) {
-    return 20;
-  } else if (percent <= 73) {
-    return 21;
-  } else if (percent <= 76) {
+  return Math.round(percent / (100 / 31)) + 1;
+
+}
+function preset2pct(preset) {
+
+  return Math.round((preset - 1) * (100 / 31));
+
+}
+
+
+/*
+ * helper to convert deltas in percent to heyu levels
+ * for standard lamp modules with levels 1–22
+ */
+function pctDelta2level(delta) {
+
+  if (delta > 96) {
     return 22;
-  } else if (percent <= 79) {
-    return 23;
-  } else if (percent <= 82) {
-    return 24;
-  } else if (percent <= 85) {
-    return 25;
-  } else if (percent <= 87) {
-    return 26;
-  } else if (percent <= 90) {
-    return 27;
-  } else if (percent <= 92) {
-    return 28;
-  } else if (percent <= 95) {
-    return 29;
-  } else if (percent <= 97) {
-    return 30;
-  } else if (percent <= 99) {
-    return 31;
+  } else {
+    return Math.round(delta / (11 / 210 * 100)) + 1;
   }
-  return 32;
+
 }
