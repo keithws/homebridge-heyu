@@ -789,7 +789,7 @@ HeyuAccessory.prototype = {
         this.log("Set preset %s %s %s %s", housecode, level, pct2preset(level), preset2pct(pct2preset(level)));
         var other = this;
         other.service.getCharacteristic(Characteristic.On)
-          .getValue();
+          .setValue(true);
         other.service.getCharacteristic(Characteristic.Brightness)
           .getValue();
         callback(null);
@@ -811,7 +811,7 @@ HeyuAccessory.prototype = {
         this.log("Set xpreset %s %s %s %s", housecode, percent, Math.round(percent / 100 * 62), this.brightness);
         var other = this;
         other.service.getCharacteristic(Characteristic.On)
-          .getValue();
+          .setValue(true);
         other.service.getCharacteristic(Characteristic.Brightness)
           .getValue();
         callback(null);
@@ -860,7 +860,7 @@ HeyuAccessory.prototype = {
         this.log("Set Bright/Dim %s %s %s ( %s % )", command, housecode, delta, percent);
         var other = this;
         other.service.getCharacteristic(Characteristic.On)
-          .getValue();
+          .setValue(true);
         other.service.getCharacteristic(Characteristic.Brightness)
           .getValue();
         callback();
