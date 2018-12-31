@@ -829,6 +829,9 @@ HeyuAccessory.prototype = {
       var current = this.brightness;
     }
 
+    this.service.getCharacteristic(Characteristic.On)
+      .setValue(true);
+
     var delta = Math.abs(current - percent);
     if (percent > current) {
       var command = X10Commands.bright;
@@ -858,11 +861,6 @@ HeyuAccessory.prototype = {
         this.brightness = percent;
         this.powerOn = true;
         this.log("Set Bright/Dim %s %s %s ( %s % )", command, housecode, delta, percent);
-        var other = this;
-        other.service.getCharacteristic(Characteristic.On)
-          .setValue(true);
-        other.service.getCharacteristic(Characteristic.Brightness)
-          .getValue();
         callback();
       }
     }.bind(this));
