@@ -2,7 +2,7 @@
 // Heyu Platform Plugin for HomeBridge
 //
 // Remember to add platform to config.json. Example:
-//"platforms": [{
+// "platforms": [{
 //       "platform": "Heyu",
 //       "name": "Heyu",
 //       "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
@@ -14,13 +14,12 @@
 "use strict";
 
 var debug = require('debug')('Heyu');
-var Accessory, Characteristic, PowerConsumption, Service, uuid;
+var Characteristic, Service;
 var exec = require('child_process').execFile;
 var execSync = require('child_process').execFileSync;
 var spawn = require('child_process').spawn;
 var os = require("os");
 var heyuExec, heyuQueue, cputemp, x10conf, useFireCracker;
-var noMotionTimer;
 var X10Commands = {
   on: "on",
   off: "off",
@@ -42,8 +41,8 @@ var X10Commands = {
 module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
-  Accessory = homebridge.hap.Accessory;
-  uuid = homebridge.hap.uuid;
+  // Accessory = homebridge.hap.Accessory;
+  // uuid = homebridge.hap.uuid;
 
   homebridge.registerPlatform("homebridge-heyu", "Heyu", HeyuPlatform);
 };
@@ -54,48 +53,51 @@ heyuQueue = {
 };
 
 function execQueue() {
-
   // push these args to the end of the queue
+  //
+  /*
+  debug("Queue", heyuQueue.items.length, arguments[1].join(" "));
+  debug("Arguments a=%s, b=%s, c=%s", a, b, c);
+  if (heyuQueue.items.length > 0) {
+    var pervious = heyuQueue.items[heyuQueue.items.length - 1];
+    debug("Previous", JSON.stringify(pervious));
+    debug("Equal %s === %s", arguments[1][2], pervious[1][2]);
+    if (arguments[1][2] === pervious[1][2] && (arguments[1][2] === 'on' || arguments[1][2] === 'off' || arguments[1][2] === 'bright' || arguments[1][2] === 'dim')) {
+      pervious[1][3] = pervious[1][3] + ',' + arguments[1][3].substring(1);
+    }
+  }
+  */
   heyuQueue.items.push(arguments);
 
   // run the queue
   runQueue();
-
 }
 
 function runQueue() {
-
   if (!heyuQueue.isRunning && heyuQueue.items.length > 0) {
-
     heyuQueue.isRunning = true;
     var args = heyuQueue.items.shift();
 
     if (args.length > 1) {
-
       // wrap callback with another function to toggle isRunning
       var callback = args[args.length - 1];
       args[args.length - 1] = function() {
-
         callback.apply(null, arguments);
         heyuQueue.isRunning = false;
         runQueue();
-
       };
-
     } else {
-
       // add callback to toggle isRunning
       args[args.length] = function() {
         heyuQueue.isRunning = false;
         runQueue();
       };
       args.length = args.length + 1;
-
     }
+    debug("heyuCommand", args[1].join(" "));
+    // debug("exec", JSON.stringify(args));
     exec.apply(null, args);
-
   }
-
 }
 
 function HeyuPlatform(log, config) {
@@ -118,15 +120,13 @@ function HeyuPlatform(log, config) {
 }
 
 function heyuShowAliases() {
-
   var aliases, lines, stdout;
 
-  stdout = execSync(heyuExec, ["show", "aliases"], {
+  stdout = execSync(heyuExec, ["-c", x10conf, "show", "aliases"], {
     "encoding": "utf8"
   });
   lines = stdout.split("\n").slice(1, -2);
-  aliases = lines.map(function (line) {
-
+  aliases = lines.map(function(line) {
     var alias, words;
 
     words = line.split(/\s+/);
@@ -135,30 +135,27 @@ function heyuShowAliases() {
       "housecode": words[3].slice(0, 1),
       "devices": words[3].slice(1),
       "moduleType": words[4],
-      "moduleOption": words[5],
+      "moduleOption": words[5]
     };
 
     return alias;
-
   });
-
   return aliases;
-
 }
 
 function readHousecode() {
-
   var housecode, matches, stdout;
 
-  stdout = execSync(heyuExec, ["info"], { encoding: "utf8" });
+  stdout = execSync(heyuExec, ["-c", x10conf, "info"], {
+    encoding: "utf8"
+  });
   matches = stdout.match(/Housecode = ([A-P])/);
   if (matches) {
     housecode = matches[1];
   }
-  debug("HOUSECODE",housecode);
+  debug("HOUSECODE", housecode);
 
   return housecode;
-
 }
 
 function enableFireCracker() {
@@ -183,8 +180,7 @@ HeyuPlatform.prototype = {
     //
     var aliases = heyuShowAliases();
 
-    aliases.forEach(function (alias) {
-
+    aliases.forEach(function(alias) {
       var device = {
         "name": alias.label.replace(/[_.-]/g, " "),
         "housecode": alias.housecode + alias.devices,
@@ -196,7 +192,6 @@ HeyuPlatform.prototype = {
       foundAccessories.push(accessory);
       var housecode = device.housecode;
       self.faccessories[housecode] = accessory;
-
     });
     // Built-in accessories and macro's
     {
@@ -215,7 +210,7 @@ HeyuPlatform.prototype = {
       foundAccessories.push(accessory);
     }
 
-    if (cputemp != undefined) {
+    if (cputemp !== undefined) {
       var device;
       device.name = os.hostname();
       device.module = "Temperature";
@@ -226,7 +221,8 @@ HeyuPlatform.prototype = {
     // Start heyu monitor
     this.log("Starting heyu monitor");
 
-    self.heyuMonitor = spawn(heyuExec, ["monitor"]);
+    self.start = spawn(heyuExec, ["-c", x10conf, "start"]);
+    self.heyuMonitor = spawn(heyuExec, ["-c", x10conf, "monitor"]);
     self.heyuMonitor.stdout.on('data', function(data) {
       self.handleOutput(self, data);
     });
@@ -244,9 +240,8 @@ HeyuPlatform.prototype = {
     }
 
     callback(foundAccessories);
-  },
+  }
 };
-
 
 function HeyuAccessory(log, device, enddevice) {
   // This is executed once per accessory during initialization
@@ -266,11 +261,9 @@ function HeyuAccessory(log, device, enddevice) {
   self.brightness_command = X10Commands.rawlevel; // dimlevel cannot be trusted
   self.statusHandling = "yes";
   self.dimmable = "yes";
-
 }
 
 HeyuPlatform.prototype.handleOutput = function(self, data) {
-
   // 06/16 20:32:48  rcvi addr unit       5 : hu A5  (Family_room_Pot_lights)
   // 06/16 20:32:48  rcvi func          Off : hc A
 
@@ -278,26 +271,24 @@ HeyuPlatform.prototype.handleOutput = function(self, data) {
   //    this.log("Message %s %s %s %s %s %s", message[2], message[3], message[4], message[5], message[6], message[7], message[8]);
   var operation = message[2];
   var proc = message[3];
-  if (proc == "addr")
+  if (proc === "addr") {
     var messageHousecode = message[8];
-  else if (proc == "func")
+  } else if (proc === "func") {
     var messageCommand = message[4];
+  }
 
-  if (proc == "addr" && operation == "rcvi") {
+  if (proc === "addr" && operation === "rcvi") {
     this.log("Event occured at housecode %s", messageHousecode);
     var accessory = self.faccessories[messageHousecode];
-    if (accessory != undefined) {
+    if (accessory !== undefined) {
       self.heyuEvent(self, accessory);
     } else {
       this.log.error("Event occured at unknown device %s ignoring", messageHousecode);
     }
   }
-
-}
-
+};
 
 HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
-
   var other = accessory;
   switch (other.module) {
     case "AM":
@@ -328,8 +319,7 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
     case "SL2AM":
     case "RS114":
     case "RF234":
-      other.service.getCharacteristic(Characteristic.On)
-        .getValue();
+      other.service.getCharacteristic(Characteristic.On).getValue();
       break;
     case "LM465-1":
     case "LM-1":
@@ -353,10 +343,8 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
     case "LL1LM":
     case "LL2LM":
     case "LL2000STW":
-      other.service.getCharacteristic(Characteristic.Brightness)
-        .getValue();
-      other.service.getCharacteristic(Characteristic.On)
-        .getValue();
+      other.service.getCharacteristic(Characteristic.Brightness).getValue();
+      other.service.getCharacteristic(Characteristic.On).getValue();
       break;
     case "MS10":
     case "MS12":
@@ -364,8 +352,7 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
     case "MS14":
     case "MS16":
       other.lastheard = Date.now();
-      other.service.getCharacteristic(Characteristic.MotionDetected)
-        .getValue();
+      other.service.getCharacteristic(Characteristic.MotionDetected).getValue();
       break;
     case "MS10A":
     case "MS12A":
@@ -374,20 +361,17 @@ HeyuPlatform.prototype.heyuEvent = function(self, accessory) {
     case "MS16A":
       //    debug(JSON.stringify(other, null, 2));
       other.lastheard = Date.now();
-      other.service.getCharacteristic(Characteristic.StatusLowBattery)
-        .getValue();
-      other.service.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
-        .getValue();
+      other.service.getCharacteristic(Characteristic.StatusLowBattery).getValue();
+      other.service.getCharacteristic(Characteristic.CurrentAmbientLightLevel).getValue();
       break;
     default:
       this.log.error("No events defined for Module Type %s", other.module);
   }
-
-}
+};
 
 HeyuAccessory.prototype = {
 
-  setupStdLM: function () {
+  setupStdLM: function() {
     this.log("StdLM: Adding %s %s as a %s", this.name, this.housecode, this.module);
     this.service = new Service.Lightbulb(this.name);
     this.service
@@ -395,7 +379,7 @@ HeyuAccessory.prototype = {
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
     // Brightness Polling
-    if (this.dimmable == "yes") {
+    if (this.dimmable === "yes") {
       this.service
         .addCharacteristic(new Characteristic.Brightness())
         .setProps({
@@ -432,7 +416,7 @@ HeyuAccessory.prototype = {
           .getCharacteristic(Characteristic.On)
           .on('get', function(callback) {
             var that = this;
-            callback(null, that.state)
+            callback(null, that.state);
           })
           .on('set', this.setPowerState.bind(this));
 
@@ -449,7 +433,7 @@ HeyuAccessory.prototype = {
           .getCharacteristic(Characteristic.On)
           .on('get', function(callback) {
             var that = this;
-            callback(null, that.state)
+            callback(null, that.state);
           })
           .on('set', this.setPowerState.bind(this));
 
@@ -491,7 +475,7 @@ HeyuAccessory.prototype = {
             .on('get', this.getPowerState.bind(this))
             .on('set', this.setPowerState.bind(this));
           // Brightness Polling
-          if (this.dimmable == "yes") {
+          if (this.dimmable === "yes") {
             this.service
               .addCharacteristic(new Characteristic.Brightness())
               .setProps({
@@ -522,7 +506,7 @@ HeyuAccessory.prototype = {
             .on('get', this.getPowerState.bind(this))
             .on('set', this.setPowerState.bind(this));
           // Brightness Polling
-          if (this.dimmable == "yes") {
+          if (this.dimmable === "yes") {
             this.service
               .addCharacteristic(new Characteristic.Brightness())
               .setProps({
@@ -562,7 +546,9 @@ HeyuAccessory.prototype = {
           .on('set', this.setPowerState.bind(this));
         this.service
           .getCharacteristic(Characteristic.OutletInUse)
-          .on('get', function (callback) { callback(null, true); });
+          .on('get', function(callback) {
+            callback(null, true);
+          });
         services.push(this.service);
         break;
       case "WS":
@@ -625,7 +611,7 @@ HeyuAccessory.prototype = {
     return services;
   },
 
-  //start of Heyu Functions
+  // start of Heyu Functions
 
   getBattery: function(callback) {
     debug("Battery", this.housecode, (Date.now() - this.lastheard));
@@ -644,13 +630,13 @@ HeyuAccessory.prototype = {
       return;
     }
 
-    if (this.statusHandling == "no") {
+    if (this.statusHandling === "no") {
       this.log.warn("Ignoring request; No status handling not available.");
       callback(new Error("No status handling defined."));
       return;
     }
 
-    execQueue(heyuExec, [this.status_command, this.housecode], function(error, responseBody, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, this.status_command, this.housecode], function(error, responseBody, stderr) {
       if (error !== null) {
         this.log('Heyu onstate function failed: ' + error);
         callback(error);
@@ -661,9 +647,7 @@ HeyuAccessory.prototype = {
         this.powerOn = binaryState;
       }
     }.bind(this));
-
   },
-
 
   setPowerState: function(powerOn, callback) {
     var housecode;
@@ -683,24 +667,22 @@ HeyuAccessory.prototype = {
       command = this.off_command;
     }
 
-  debug("HeyuCommand", heyuExec, command, housecode);
-  execQueue(heyuExec, [command, housecode], function(error, stdout, stderr) {
-    if (error !== null) {
-      this.log('exec error: ' + error);
-      this.log('Heyu set power function failed!');
-      callback(error);
-    } else {
-      this.powerOn = powerOn;
-      this.log("Set power state of %s to %s", housecode, command);
-      if (this.dimmable == "yes") {
-        var that = this;
-        that.service.getCharacteristic(Characteristic.Brightness)
-          .getValue();
+    // debug("HeyuCommand", heyuExec, command, housecode);
+    execQueue(heyuExec, ["-c", x10conf, command, housecode], function(error, stdout, stderr) {
+      if (error !== null) {
+        this.log('exec error: ' + error);
+        this.log('Heyu set power function failed!');
+        callback(error);
+      } else {
+        this.powerOn = powerOn;
+        this.log("Set power state of %s to %s", housecode, command);
+        if (this.dimmable === "yes") {
+          var that = this;
+          that.service.getCharacteristic(Characteristic.Brightness).getValue();
+        }
+        callback();
       }
-      callback();
-    }
-  }.bind(this));
-
+    }.bind(this));
   },
 
   getPowerState: function(callback) {
@@ -710,18 +692,16 @@ HeyuAccessory.prototype = {
       return;
     }
 
-    if (this.statusHandling == "no") {
+    if (this.statusHandling === "no") {
       this.log.warn("Ignoring request; No status handling not available.");
       callback(new Error("No status handling defined."));
       return;
     }
 
-
     var housecode = this.housecode;
     var command = this.status_command;
 
-
-    execQueue(heyuExec, [command, housecode], function(error, responseBody, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, command, housecode], function(error, responseBody, stderr) {
       if (error !== null) {
         this.log('Heyu onstate function failed: ' + error);
         callback(error);
@@ -733,7 +713,6 @@ HeyuAccessory.prototype = {
         this.powerOn = powerOn;
       }
     }.bind(this));
-
   },
 
   getBrightness: function(callback) {
@@ -743,7 +722,7 @@ HeyuAccessory.prototype = {
       return;
     }
 
-    if (this.dimmable == "no") {
+    if (this.dimmable === "no") {
       this.log.warn("Ignoring request; housecode not dimmable.");
       callback(new Error("Device not dimmable."));
       return;
@@ -752,7 +731,7 @@ HeyuAccessory.prototype = {
     var housecode = this.housecode;
 
     // NOTE dimlevel cannot be trusted
-    execQueue(heyuExec, [X10Commands.rawlevel, housecode], function(error, stdout, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, X10Commands.rawlevel, housecode], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu function failed: ' + error);
         callback(error);
@@ -773,13 +752,12 @@ HeyuAccessory.prototype = {
         callback(null, percent);
       }
     }.bind(this));
-
   },
 
   setSLBrightness: function(level, callback) {
     var housecode = this.housecode;
 
-    execQueue(heyuExec, [X10Commands.preset, housecode, pct2preset(level)], function(error, stdout, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, X10Commands.preset, housecode, pct2preset(level)], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu preset function failed: %s', error);
         callback(error);
@@ -787,11 +765,9 @@ HeyuAccessory.prototype = {
         this.brightness = level;
         this.powerOn = true;
         this.log("Set preset %s %s %s %s", housecode, level, pct2preset(level), preset2pct(pct2preset(level)));
-        var other = this;
-        other.service.getCharacteristic(Characteristic.On)
-          .setValue(true);
-        other.service.getCharacteristic(Characteristic.Brightness)
-          .getValue();
+        // var other = this;
+        // other.service.getCharacteristic(Characteristic.On).setValue(true);
+        // other.service.getCharacteristic(Characteristic.Brightness).getValue();
         callback(null);
       }
     }.bind(this));
@@ -801,7 +777,7 @@ HeyuAccessory.prototype = {
     var housecode = this.housecode;
 
     // NOTE documented limit is 63, but heyu reports 62 after setting 63
-    execQueue(heyuExec, [X10Commands.xpreset, housecode, Math.round(percent / 100 * 62)], function(error, stdout, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, X10Commands.xpreset, housecode, Math.round(percent / 100 * 62)], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu xpreset function failed: %s', error);
         callback(error);
@@ -809,18 +785,15 @@ HeyuAccessory.prototype = {
         this.brightness = Math.round(Math.round(percent / 100 * 62) * 100 / 62);
         this.powerOn = true;
         this.log("Set xpreset %s %s %s %s", housecode, percent, Math.round(percent / 100 * 62), this.brightness);
-        var other = this;
-        other.service.getCharacteristic(Characteristic.On)
-          .setValue(true);
-        other.service.getCharacteristic(Characteristic.Brightness)
-          .getValue();
+        // var other = this;
+        // other.service.getCharacteristic(Characteristic.On).setValue(true);
+        // other.service.getCharacteristic(Characteristic.Brightness).getValue();
         callback(null);
       }
     }.bind(this));
   },
 
   setBrightness: function(percent, callback) {
-
     var housecode = this.housecode;
 
     if (isNaN(this.brightness) || !this.powerOn) {
@@ -829,8 +802,7 @@ HeyuAccessory.prototype = {
       var current = this.brightness;
     }
 
-    this.service.getCharacteristic(Characteristic.On)
-      .setValue(true);
+    // this.service.getCharacteristic(Characteristic.On).setValue(true);
 
     var delta = Math.abs(current - percent);
     if (percent > current) {
@@ -838,6 +810,7 @@ HeyuAccessory.prototype = {
     } else if (percent < current) {
       var command = X10Commands.dim;
     } else {
+      // this.log("Ignoring Brightness change");
       callback();
       return;
     }
@@ -852,8 +825,8 @@ HeyuAccessory.prototype = {
       return;
     }
 
-    debug("HeyuCommand", heyuExec, command, housecode, level);
-    execQueue(heyuExec, [command, housecode, level], function(error, stdout, stderr) {
+    // debug("HeyuCommand", heyuExec, command, housecode, level);
+    execQueue(heyuExec, ["-c", x10conf, command, housecode, level], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('Heyu brightness function failed: %s', error);
         callback(error);
@@ -864,7 +837,6 @@ HeyuAccessory.prototype = {
         callback();
       }
     }.bind(this));
-
   },
 
   getTemperature: function(callback) {
@@ -892,27 +864,21 @@ HeyuAccessory.prototype = {
  * @url http://kbase.x10.com/wiki/Using_Pre-Set_Dim
  */
 function pct2preset(percent) {
-
   return Math.round(percent / (100 / 31)) + 1;
-
 }
+
 function preset2pct(preset) {
-
   return Math.round((preset - 1) * (100 / 31));
-
 }
-
 
 /*
  * helper to convert deltas in percent to heyu levels
  * for standard lamp modules with levels 1–22
  */
 function pctDelta2level(delta) {
-
   if (delta > 96) {
     return 22;
   } else {
     return Math.round(delta / (11 / 210 * 100)) + 1;
   }
-
 }

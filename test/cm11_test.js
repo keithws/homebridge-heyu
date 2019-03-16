@@ -8,15 +8,15 @@ cm11.on('close', onClose);
 
 cm11.start('/Dev/tty.usbserial');
 
-// cm11.status();
+cm11.status();
 
 var addr = ['A15', 'A14'];
 debug("turnOn");
 // cm11.turnOn(addr);
 debug("dim");
-cm11.dim(addr, 11);
+// cm11.dim(addr, 11);
 debug("bright");
-cm11.bright(addr, 11);
+// cm11.bright(addr, 11);
 debug("turnOff");
 cm11.turnOff(addr);
 debug("done");
