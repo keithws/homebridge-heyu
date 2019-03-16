@@ -1,11 +1,31 @@
 #! /bin/bash
 
-if [ "$1" != "monitor" ] 
+if [ "$1" != "monitor" ]
 	then
-	echo 1
-	else
+	echo "  alias  Front_Porch             A1   StdLM"
+  echo "  alias  Garden_Path             A2   StdAM"
+  echo "  alias  Side_Door               A3   StdLM"
+  echo "  alias  Rear_Door               A4   SL2LM"
+  echo "  alias  Family_room_Pot_lights  A5   SL2LM  ONLEVEL RESUME"
+  echo "  alias  Family_room_Lamp        A6   StdLM"
+  echo "  alias  Family_room_outlet      A7   StdAM"
+  echo "  alias  Front_Door              A8   SL2LM  ONLEVEL RESUME"
+  echo "  alias  Basement_Stair          A9   SL2LM  ONLEVEL RESUME"
+  echo "  alias  Kitchen_Sink            A11  StdLM"
+  echo "  alias  Living_Room_Lamp        A13  StdLM"
+  echo "  alias  Staircase_Lamp          A14  StdAM"
+  echo "  alias  Powder_Room             A15  StdLM"
+  echo "  alias  Garage_Outlet           A16  StdAM"
+	echo "  alias  Test_Motion            B1   MS14  RFIGNORE"
+	echo "  alias  Test_Motion_LS            B2   MS14  RFIGNORE"
+  echo "  alias  Porch_Motion            B3   MS14  RFIGNORE"
+  echo "  alias  Porch_Motion_LS         B4   MS14A  RFIGNORE"
+  echo "  alias  Stereo                  B9   StdAM  "
+	echo "Housecode = A"
+else
 while :;
 do
+sleep 10000
 echo "06/16 20:32:48  rcvi addr unit       8 : hu B2  (Family_room_Pot_lights)"
 sleep 1
 echo "06/16 20:32:48  rcvi func          Off : hc A"
@@ -28,4 +48,3 @@ echo "06/16 20:32:48  rcvi func          Off : hc B"
 sleep 10
 done
 fi
-
