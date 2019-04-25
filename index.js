@@ -1,4 +1,3 @@
-/* jshint node: true */
 // Heyu Platform Plugin for HomeBridge
 //
 // Remember to add platform to config.json. Example:
@@ -194,27 +193,28 @@ HeyuPlatform.prototype = {
       self.faccessories[housecode] = accessory;
     });
     // Built-in accessories and macro's
+    var accessory, device;
     {
-      var device = {};
+      device = {};
       device.name = "All Devices";
       device.housecode = this.housecode;
       device.module = "Macro-allon";
-      var accessory = new HeyuAccessory(self.log, device, null);
+      accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
     } {
-      var device = {};
+      device = {};
       device.name = "All Lights";
       device.housecode = this.housecode;
       device.module = "Macro-lightson";
-      var accessory = new HeyuAccessory(self.log, device, null);
+      accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
     }
 
     if (cputemp !== undefined) {
-      var device;
+      device = {};
       device.name = os.hostname();
       device.module = "Temperature";
-      var accessory = new HeyuAccessory(self.log, device, null);
+      accessory = new HeyuAccessory(self.log, device, null);
       foundAccessories.push(accessory);
     }
 
@@ -243,7 +243,7 @@ HeyuPlatform.prototype = {
   }
 };
 
-function HeyuAccessory(log, device, enddevice) {
+function HeyuAccessory(log, device) {
   // This is executed once per accessory during initialization
 
   var self = this;
@@ -274,7 +274,7 @@ HeyuPlatform.prototype.handleOutput = function(self, data) {
   if (proc === "addr") {
     var messageHousecode = message[8];
   } else if (proc === "func") {
-    var messageCommand = message[4];
+    // FUTURE var messageCommand = message[4];
   }
 
   if (proc === "addr" && operation === "rcvi") {
@@ -636,12 +636,14 @@ HeyuAccessory.prototype = {
       return;
     }
 
-    execQueue(heyuExec, ["-c", x10conf, this.status_command, this.housecode], function(error, responseBody, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, this.status_command, this.housecode], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu onstate function failed: ' + error);
         callback(error);
       } else {
-        var binaryState = (parseInt(responseBody) - 1) * -99999 + 1;
+        var binaryState = (parseInt(stdout) - 1) * -99999 + 1;
         this.log("Light Sensor of %s %s", this.housecode, binaryState);
         callback(null, binaryState);
         this.powerOn = binaryState;
@@ -671,6 +673,8 @@ HeyuAccessory.prototype = {
     execQueue(heyuExec, ["-c", x10conf, command, housecode], function(error, stdout, stderr) {
       if (error !== null) {
         this.log('exec error: ' + error);
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu set power function failed!');
         callback(error);
       } else {
@@ -701,12 +705,14 @@ HeyuAccessory.prototype = {
     var housecode = this.housecode;
     var command = this.status_command;
 
-    execQueue(heyuExec, ["-c", x10conf, command, housecode], function(error, responseBody, stderr) {
+    execQueue(heyuExec, ["-c", x10conf, command, housecode], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu onstate function failed: ' + error);
         callback(error);
       } else {
-        var binaryState = parseInt(responseBody);
+        var binaryState = parseInt(stdout);
         this.log("Got power state of %s %s", housecode, binaryState);
         var powerOn = binaryState > 0;
         callback(null, powerOn);
@@ -733,19 +739,22 @@ HeyuAccessory.prototype = {
     // NOTE dimlevel cannot be trusted
     execQueue(heyuExec, ["-c", x10conf, X10Commands.rawlevel, housecode], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu function failed: ' + error);
         callback(error);
       } else {
         var rawlevel = parseInt(stdout);
+        var percent;
         if (this.hasPartialSupportForExtendedCodes) {
           // NOTE documented limit is 63, but heyu reports 62 after setting 63
-          var percent = Math.round(rawlevel / 62 * 100);
+          percent = Math.round(rawlevel / 62 * 100);
           this.log("Got brightness of %s/62 ( %s%% ) from %s", rawlevel, percent, housecode);
         } else if (this.hasSupportForOldPreSetDim) {
-          var percent = preset2pct(parseInt(stdout));
+          percent = preset2pct(parseInt(stdout));
           this.log("Got brightness of %s/32 ( %s%% ) from %s", rawlevel, percent, housecode);
         } else {
-          var percent = Math.round(rawlevel / 210 * 100);
+          percent = Math.round(rawlevel / 210 * 100);
           this.log("Got brightness of %s/210 ( %s%% ) from %s", rawlevel, percent, housecode);
         }
         this.brightness = percent;
@@ -759,6 +768,8 @@ HeyuAccessory.prototype = {
 
     execQueue(heyuExec, ["-c", x10conf, X10Commands.preset, housecode, pct2preset(level)], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu preset function failed: %s', error);
         callback(error);
       } else {
@@ -779,6 +790,8 @@ HeyuAccessory.prototype = {
     // NOTE documented limit is 63, but heyu reports 62 after setting 63
     execQueue(heyuExec, ["-c", x10conf, X10Commands.xpreset, housecode, Math.round(percent / 100 * 62)], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu xpreset function failed: %s', error);
         callback(error);
       } else {
@@ -796,19 +809,21 @@ HeyuAccessory.prototype = {
   setBrightness: function(percent, callback) {
     var housecode = this.housecode;
 
+    var current;
     if (isNaN(this.brightness) || !this.powerOn) {
-      var current = 100;
+      current = 100;
     } else {
-      var current = this.brightness;
+      current = this.brightness;
     }
 
     // this.service.getCharacteristic(Characteristic.On).setValue(true);
 
     var delta = Math.abs(current - percent);
+    var command;
     if (percent > current) {
-      var command = X10Commands.bright;
+      command = X10Commands.bright;
     } else if (percent < current) {
-      var command = X10Commands.dim;
+      command = X10Commands.dim;
     } else {
       // this.log("Ignoring Brightness change");
       callback();
@@ -828,6 +843,8 @@ HeyuAccessory.prototype = {
     // debug("HeyuCommand", heyuExec, command, housecode, level);
     execQueue(heyuExec, ["-c", x10conf, command, housecode, level], function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('Heyu brightness function failed: %s', error);
         callback(error);
       } else {
@@ -840,12 +857,14 @@ HeyuAccessory.prototype = {
   },
 
   getTemperature: function(callback) {
-    exec(cputemp, function(error, responseBody, stderr) {
+    exec(cputemp, function(error, stdout, stderr) {
       if (error !== null) {
+        this.log('exec stdout: ' + stdout);
+        this.log('exec stderr: ' + stderr);
         this.log('cputemp function failed: ' + error);
         callback(error);
       } else {
-        var binaryState = parseInt(responseBody);
+        var binaryState = parseInt(stdout);
         this.log("Got Temperature of %s", binaryState);
         this.brightness = binaryState;
         callback(null, binaryState);
