@@ -4,7 +4,7 @@
   "description": "X10/Heyu plugin for HomeBridge",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "eslint \"**/*.js\""
   },
   "repository": {
     "type": "git",
@@ -28,5 +28,12 @@
   "bugs": {
     "url": "https://github.com/NorthernMan54/homebridge-heyu/issues"
   },
-  "homepage": "https://github.com/NorthernMan54/homebridge-heyu#readme"
+  "homepage": "https://github.com/NorthernMan54/homebridge-heyu#readme",
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "pre-commit": "^1.2.2"
+  },
+  "pre-commit": {
+    "silent": true
+  }
 }
