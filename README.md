@@ -2,6 +2,8 @@
 
 [![NPM Downloads](https://img.shields.io/npm/dm/homebridge-heyu.svg?style=flat)](https://npmjs.org/package/homebridge-heyu)
 
+# Support is no longer available for the plugin.  Everyone I have retired my last X10 device so I will no longer be able to work on issues with this plugin.  If you are an active user, and want to take over please let me know and we can look into transferring the plugin over.
+
 Supports X10 devices via heyu on the HomeBridge Platform. Tested with a CM11A
 Module connected via a USB Serial adapter. For device configuration, it parses
 the heyu configuration file /etc/heyu/x10.conf and creates an accessory for each
