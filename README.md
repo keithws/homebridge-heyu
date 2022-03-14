@@ -2,10 +2,6 @@
 
 [![NPM Downloads](https://img.shields.io/npm/dm/homebridge-heyu.svg?style=flat)](https://npmjs.org/package/homebridge-heyu)
 
-# Support is no longer available for the plugin.  
-
-## Everyone I have retired my last X10 device so I will no longer be able to work on issues with this plugin.  If you are an active user, and want to take over please let me know and we can look into transferring the plugin over.
-
 Supports X10 devices via heyu on the HomeBridge Platform. Tested with a CM11A
 Module connected via a USB Serial adapter. For device configuration, it parses
 the heyu configuration file /etc/heyu/x10.conf and creates an accessory for each
@@ -74,6 +70,7 @@ running
        "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
        "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
        "useFireCracker": false              //optional - If true, issues commands via the CM17A FireCracker module
+       "housecode": "A"                     //optional - set housecode if no CM11a present
        "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
    }]
 ```
@@ -118,3 +115,4 @@ echo $cpuTemp1" C"
 
 * W7RZL - Firecracker commands and additional modules
 * keithws - Command queueing and enhanced dimming
+* drmessano - Fix Housecode when no CM11a present
