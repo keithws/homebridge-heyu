@@ -7,6 +7,7 @@
 //       "heyuExec": "/usr/local/bin/heyu",   //optional - defaults to /usr/local/bin/heyu
 //       "x10conf": "/etc/heyu/x10.conf",     //optional - defaults to /etc/heyu/x10.conf
 //       "useFireCracker": false,             //optional - If true, uses CM17A FireCracker module to issue on/off commands
+//       "housecode": "A"                     //optional - set housecode if no CM11a present
 //       "cputemp": "cputemp"                 //optional - If present includes cpu TemperatureSensor
 //   }]
 
@@ -18,7 +19,7 @@ var exec = require('child_process').execFile;
 var execSync = require('child_process').execFileSync;
 var spawn = require('child_process').spawn;
 var os = require("os");
-var heyuExec, heyuQueue, cputemp, x10conf, useFireCracker;
+var heyuExec, heyuQueue, cputemp, x10conf, useFireCracker, housecode;
 var X10Commands = {
   on: "on",
   off: "off",
@@ -108,8 +109,8 @@ function HeyuPlatform(log, config) {
   x10conf = config.x10conf || "/etc/heyu/x10.conf";
   useFireCracker = config.useFireCracker || false;
   cputemp = config.cputemp;
-  this.housecode = readHousecode();
-
+  this.housecode = config.housecode || readHousecode();
+  
   if (useFireCracker) {
     enableFireCracker();
   }
